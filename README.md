@@ -1,6 +1,7 @@
 # HardwareTester
 
-This project is based in this [template](https://github.com/maximegris/angular-electron).
+An project with Electron + Angular 8 for test hardware through serial port, using [Node 
+SerialPort](https://serialport.io). This project is based in this [template](https://github.com/maximegris/angular-electron).
 
 ## To build for development
 
