@@ -7,9 +7,21 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta
             http-equiv="Content-Security-Policy"
-            content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+            content="default-src 'self';
+                    style-src 'self' 'unsafe-inline'; 
+                    font-src *; 
+                    img-src 'self' data:; 
+                    style-src-elem * 'unsafe-inline';"
         />
         <link rel="icon" type="image/x-icon" href="favicon.ico" />
+        <link
+            href="https://fonts.googleapis.com/css?family=Roboto:300,400,500&display=swap"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/icon?family=Material+Icons"
+            rel="stylesheet"
+        />
     </head>
     <body>
         <app-root>Loading...</app-root>

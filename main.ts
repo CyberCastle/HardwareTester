@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, screen, Menu } from 'electron'
 import * as path from 'path'
 import * as url from 'url'
 
@@ -18,6 +18,7 @@ function createWindow() {
         height: size.height,
         webPreferences: {
             nodeIntegration: true,
+            backgroundThrottling: false,
         },
     })
 
@@ -52,7 +53,26 @@ try {
     // This method will be called when Electron has finished
     // initialization and is ready to create browser windows.
     // Some APIs can only be used after this event occurs.
-    app.on('ready', createWindow)
+    app.on('ready', () => {
+        createWindow()
+
+        const menuTemplate = [
+            {
+                label: app.getName(),
+                submenu: [
+                    {
+                        label: 'About',
+                        click() {
+                            win.webContents.send('openAboutModal', '')
+                        },
+                    },
+                ],
+            },
+        ]
+
+        const menu = Menu.buildFromTemplate(menuTemplate)
+        Menu.setApplicationMenu(menu)
+    })
 
     // Quit when all windows are closed.
     app.on('window-all-closed', () => {

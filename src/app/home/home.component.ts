@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core'
+import { MatDialog } from '@angular/material'
 import { ElectronService } from '../core/services/electron/electron.service'
+import { AboutComponent } from '../modal/about/about.component'
 
 @Component({
     selector: 'app-home',
@@ -7,7 +9,7 @@ import { ElectronService } from '../core/services/electron/electron.service'
     styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements OnInit {
-    constructor(private electron: ElectronService) {}
+    constructor(private electron: ElectronService, public dialog: MatDialog) {}
 
     ngOnInit() {
         this.electron.serialPort
@@ -18,5 +20,11 @@ export class HomeComponent implements OnInit {
             .catch((err: any) => {
                 console.log(err)
             })
+    }
+
+    openAboutModal(): void {
+        this.dialog.open(AboutComponent, {
+            width: '250px',
+        })
     }
 }
