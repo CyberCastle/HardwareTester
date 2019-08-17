@@ -20,6 +20,30 @@ export class HomeComponent implements OnInit {
             .catch((err: any) => {
                 console.log(err)
             })
+
+        var port = new this.electron.serialPort(
+            '/dev/tty.usbmodemCK50952053FFFF1',
+            {
+                baudRate: 9600,
+            },
+            error => {
+                if (error != undefined) {
+                    console.log(error)
+                }
+            }
+        )
+
+        const parsers = this.electron.serialPort.parsers
+        const parser = port.pipe(
+            new parsers.Readline({
+                delimiter: '\r\n',
+            })
+        )
+
+        parser.on('data', function(data) {
+            data = data.toString()
+            console.log(data)
+        })
     }
 
     openAboutModal(): void {
