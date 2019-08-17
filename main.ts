@@ -56,7 +56,7 @@ try {
     app.on('ready', () => {
         createWindow()
 
-        const menuTemplate = [
+        const menuTemplate: Electron.MenuItemConstructorOptions[] = [
             {
                 label: app.getName(),
                 submenu: [
@@ -66,6 +66,8 @@ try {
                             win.webContents.send('openAboutModal', '')
                         },
                     },
+                    { type: 'separator' },
+                    { role: 'quit' },
                 ],
             },
         ]
