@@ -1,5 +1,4 @@
 import { Injectable } from '@angular/core'
-import * as SerialPort from 'serialport'
 
 // If you import a module but never use any of the imported values other than as TypeScript types,
 // the resulting javascript file will look as if you never imported the module at all.
@@ -16,7 +15,6 @@ export class ElectronService {
     remote: typeof remote
     childProcess: typeof childProcess
     fs: typeof fs
-    serialPort: typeof SerialPort
 
     get isElectron() {
         return window && window.process && window.process.type
@@ -31,9 +29,6 @@ export class ElectronService {
 
             this.childProcess = window.require('child_process')
             this.fs = window.require('fs')
-
-            // SerialPort support
-            this.serialPort = window.require('serialport')
         }
     }
 }

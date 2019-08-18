@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core'
 import { MatDialog } from '@angular/material'
-import { ElectronService } from '../core/services/electron/electron.service'
+import { SerialPortService } from '../core/services/hardware/serial-port.service'
 import { AboutComponent } from '../modal/about/about.component'
 
 @Component({
@@ -9,10 +9,13 @@ import { AboutComponent } from '../modal/about/about.component'
     styleUrls: ['./home.component.scss'],
 })
 export class HomeComponent implements OnInit {
-    constructor(private electron: ElectronService, public dialog: MatDialog) {}
+    constructor(
+        private serialPortService: SerialPortService,
+        public dialog: MatDialog
+    ) {}
 
     ngOnInit() {
-        this.electron.serialPort
+        this.serialPortService.serialPort
             .list()
             .then((ports: any) => {
                 console.log(ports)
@@ -20,8 +23,17 @@ export class HomeComponent implements OnInit {
             .catch((err: any) => {
                 console.log(err)
             })
+    }
 
-        var port = new this.electron.serialPort(
+    openAboutModal(): void {
+        this.dialog.open(AboutComponent, {
+            width: '250px',
+        })
+    }
+
+    // Example how read serial port
+    readPort(): void {
+        var port = new this.serialPortService.serialPort(
             '/dev/tty.usbmodemCK50952053FFFF1',
             {
                 baudRate: 9600,
@@ -33,7 +45,7 @@ export class HomeComponent implements OnInit {
             }
         )
 
-        const parsers = this.electron.serialPort.parsers
+        const parsers = this.serialPortService.serialPort.parsers
         const parser = port.pipe(
             new parsers.Readline({
                 delimiter: '\r\n',
@@ -43,12 +55,6 @@ export class HomeComponent implements OnInit {
         parser.on('data', function(data) {
             data = data.toString()
             console.log(data)
-        })
-    }
-
-    openAboutModal(): void {
-        this.dialog.open(AboutComponent, {
-            width: '250px',
         })
     }
 }
