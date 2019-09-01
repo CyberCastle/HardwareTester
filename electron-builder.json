@@ -32,6 +32,5 @@
         "target": ["AppImage"]
     },
     "nodeGypRebuild": "true",
-    "asar": "false",
-    "electronVersion": "6.0.6"
+    "asar": "false"
 }
