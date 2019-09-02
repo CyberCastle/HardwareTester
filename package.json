@@ -51,7 +51,7 @@
         "@types/jasminewd2": "2.0.6",
         "@types/mocha": "5.2.7",
         "@types/node": "12.7.3",
-        "chai": "4.2.0",
+        "chai": "^4.2.0",
         "codelyzer": "5.1.0",
         "conventional-changelog-cli": "2.0.23",
         "core-js": "3.2.1",
@@ -89,7 +89,9 @@
         "@angular/forms": "^8.2.4",
         "@angular/material": "8.1.4",
         "@serialport/bindings": "2.0.8",
+        "@types/chai": "^4.2.0",
         "@types/serialport": "7.0.4",
+        "scanf": "^1.0.2",
         "serialport": "7.1.5"
     }
 }
