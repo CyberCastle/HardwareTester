@@ -2,21 +2,19 @@ import { SerialPortService } from '../serialport/serial-port.service'
 import { SerialPortBase } from '../serialport/serial-port'
 import { Timeout } from '../../utils/await-timeout'
 import { sscanf } from 'scanf'
-import { assert } from 'chai'
+import { assert, expect } from 'chai'
 
 export class I2CDriver extends SerialPortBase {
     constructor(
         private serialPortService: SerialPortService,
         private portName: string,
-        private reset?: boolean | true
+        private errorCallback?: SerialPortBase.ErrorCallback
     ) {
         super(serialPortService, portName, 1000000)
     }
 
-    public async connect(
-        errorCallback?: SerialPortBase.ErrorCallback
-    ): Promise<I2CDriver.Status> {
-        await this._connect(errorCallback)
+    public async connect(reset?: boolean | true): Promise<I2CDriver.Status> {
+        await this._connect(this.errorCallback)
 
         // May be in capture or monitor mode, send char and wait for 50 ms
         await this._write('@')
@@ -49,7 +47,16 @@ export class I2CDriver extends SerialPortBase {
             }
         }
 
-        return this.getStatus()
+        const status = await this.getStatus()
+
+        if (reset || (status.sda_state != 1 && status.scl_state != 1)) {
+            await this.reset()
+            return this.getStatus()
+        }
+
+        return new Promise<I2CDriver.Status>((resolve, reject) => {
+            resolve(status)
+        })
     }
 
     public async echo(char: string): Promise<string> {
@@ -96,6 +103,34 @@ export class I2CDriver extends SerialPortBase {
 
         let speedValue = { 100: '1', 400: '4' }[speed]
         return this._write(speedValue)
+    }
+
+    public async reset(): Promise<void> {
+        await this._write('x')
+        const response = await this._read()
+
+        return new Promise<void>((resolve, reject) => {
+            if (response !== '3') {
+                reject('I2C bus is busy')
+            } else {
+                this.setSpeed(100).then(() => {
+                    console.info('I2C Bus reset')
+                    resolve()
+                })
+            }
+        })
+    }
+
+    public async setPullups(controlBits: number): Promise<void> {
+        expect(
+            controlBits,
+            'Between 0 and 63, both inclusive, are the allowed values'
+        )
+            .to.be.least(0)
+            .and.to.be.below(64)
+
+        const controlBitsChar = String.fromCharCode(controlBits)
+        return this._write('u' + controlBitsChar)
     }
 
     public start(): void {
