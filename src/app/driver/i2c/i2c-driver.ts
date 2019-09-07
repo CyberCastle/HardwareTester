@@ -126,7 +126,8 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public async reset(): Promise<void> {
-        return this._write('_')
+        await this._write('_')
+        return Timeout.sleep(500)
     }
 
     public async setPullups(controlBits: number): Promise<void> {
