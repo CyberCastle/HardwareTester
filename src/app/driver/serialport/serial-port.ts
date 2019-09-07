@@ -64,8 +64,12 @@ export abstract class SerialPortBase {
         })
     }
 
-    protected async _read(): Promise<string> {
-        await Timeout.sleep(this.waitForResponseTime)
+    protected async _read(waitTime: number = 0): Promise<string> {
+        await Timeout.sleep(
+            waitTime < this.waitForResponseTime
+                ? this.waitForResponseTime
+                : waitTime
+        )
         return new Promise<string>((resolve, reject) => {
             const _buffer = this.buffer
             this.buffer = ''

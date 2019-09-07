@@ -13,7 +13,7 @@ export class I2CDriver extends SerialPortBase {
         super(serialPortService, portName, 1000000)
     }
 
-    public async connect(reset?: boolean | true): Promise<I2CDriver.Status> {
+    public async connect(reset: boolean = true): Promise<I2CDriver.Status> {
         await this._connect(this.errorCallback)
 
         // May be in capture or monitor mode, send char and wait for 50 ms
@@ -131,6 +131,43 @@ export class I2CDriver extends SerialPortBase {
 
         const controlBitsChar = String.fromCharCode(controlBits)
         return this._write('u' + controlBitsChar)
+    }
+
+    public async scan(print: boolean = false): Promise<number[]> {
+        await this._write('d')
+        const bitAddressList = [...(await this._read(30))]
+        const hexAddressList: number[] = []
+        let printLine: string[] = []
+        let line = 0
+
+        bitAddressList.map((bit, index) => {
+            let i2cAddress = index + 8
+
+            if (print) {
+                if (bit == '1') {
+                    printLine.push(i2cAddress.toString(16).toUpperCase())
+                } else {
+                    printLine.push('--')
+                }
+
+                if (i2cAddress % 8 == 7) {
+                    console.info(
+                        (++line).toString().padStart(2, '0') +
+                            ') ' +
+                            printLine.join(' ')
+                    )
+                    printLine = []
+                }
+            }
+
+            if (bit == '1') {
+                hexAddressList.push(i2cAddress)
+            }
+        })
+
+        return new Promise((resolve, reject) => {
+            resolve(hexAddressList)
+        })
     }
 
     public start(): void {
