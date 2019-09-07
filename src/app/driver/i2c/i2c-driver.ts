@@ -94,7 +94,7 @@ export class I2CDriver extends SerialPortBase {
         })
     }
 
-    public setSpeed(speed: number): Promise<void> {
+    public i2cSpeed(speed: number): Promise<void> {
         assert.include(
             [100, 400],
             speed,
@@ -113,7 +113,7 @@ export class I2CDriver extends SerialPortBase {
             if (response !== '3') {
                 reject('I2C bus is busy')
             } else {
-                this.setSpeed(100).then(() => {
+                this.i2cSpeed(100).then(() => {
                     console.info('I2C Bus reset')
                     resolve()
                 })
