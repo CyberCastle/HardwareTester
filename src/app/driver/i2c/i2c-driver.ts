@@ -105,7 +105,7 @@ export class I2CDriver extends SerialPortBase {
         return this._write(speedValue)
     }
 
-    public async reset(): Promise<void> {
+    public async i2cReset(): Promise<void> {
         await this._write('x')
         const response = await this._read()
 
@@ -119,6 +119,14 @@ export class I2CDriver extends SerialPortBase {
                 })
             }
         })
+    }
+
+    public async i2cRestore(): Promise<void> {
+        return this._write('i')
+    }
+
+    public async reset(): Promise<void> {
+        return this._write('_')
     }
 
     public async setPullups(controlBits: number): Promise<void> {
@@ -174,13 +182,6 @@ export class I2CDriver extends SerialPortBase {
         console.log('jj')
     }
     public stop(): void {
-        console.log('jj')
-    }
-
-    public starMonitor(): void {
-        console.log('jj')
-    }
-    public stopMonitor(): void {
         console.log('jj')
     }
 }
