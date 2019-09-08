@@ -3,19 +3,13 @@ import { Timeout } from '../../utils/await-timeout'
 import * as SerialPort from 'serialport'
 
 export abstract class SerialPortBase {
-    protected constructor(
-        private _portService: SerialPortService,
-        private _portName: string,
-        private _baudRate: number
-    ) {}
+    protected constructor(private _portService: SerialPortService, private _portName: string, private _baudRate: number) {}
 
     private _port: SerialPort
     private buffer: string = ''
     private waitForResponseTime: number = 20
 
-    protected async _connect(
-        errorCallback?: SerialPortBase.ErrorCallback
-    ): Promise<void> {
+    protected async _connect(errorCallback?: SerialPortBase.ErrorCallback): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this._port = new this._portService.serialPort(
                 this._portName,
@@ -30,7 +24,7 @@ export abstract class SerialPortBase {
             )
 
             this._port.on('data', data => {
-                data.toString('utf8')
+                data.toString('binary')
                 this.buffer += data
             })
 
@@ -48,7 +42,7 @@ export abstract class SerialPortBase {
 
     protected async _write(text: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this._port.write(text, 'utf8', error => {
+            this._port.write(text, 'binary', error => {
                 if (error != undefined) {
                     reject(error)
                 } else {
@@ -65,11 +59,7 @@ export abstract class SerialPortBase {
     }
 
     protected async _read(waitTime: number = 0): Promise<string> {
-        await Timeout.sleep(
-            waitTime < this.waitForResponseTime
-                ? this.waitForResponseTime
-                : waitTime
-        )
+        await Timeout.sleep(waitTime < this.waitForResponseTime ? this.waitForResponseTime : waitTime)
         return new Promise<string>((resolve, reject) => {
             const _buffer = this.buffer
             this.buffer = ''
