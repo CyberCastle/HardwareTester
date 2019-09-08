@@ -21,28 +21,17 @@ export class I2CDriver extends SerialPortBase {
         Timeout.sleep(50)
 
         // May be waiting up to 64 bytes of input (command code 0xff)
-        await this._write(
-            '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-        )
+        await this._write('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
 
         await this._clearBuffer()
 
-        const ecoChars = [
-            'A',
-            String.fromCharCode(0xd),
-            String.fromCharCode(0xa),
-            'Z',
-        ]
+        const ecoChars = ['A', String.fromCharCode(0xd), String.fromCharCode(0xa), 'Z']
 
         for (let i = 0; i < ecoChars.length; i++) {
             let ecoChar = await this.echo(ecoChars[i])
             if (ecoChar.length > 1 || ecoChar != ecoChars[i]) {
                 return new Promise<I2CDriver.Status>((resolve, reject) => {
-                    reject(
-                        new Error(
-                            `Echo test failed. Expected ${ecoChars[i]} but received ${ecoChar}`
-                        )
-                    )
+                    reject(new Error(`Echo test failed. Expected ${ecoChars[i]} but received ${ecoChar}`))
                 })
             }
         }
@@ -68,10 +57,7 @@ export class I2CDriver extends SerialPortBase {
     public async getStatus(): Promise<I2CDriver.Status> {
         await this._write('?')
         const statusBuffer = await this._read()
-        const status = sscanf(
-            statusBuffer,
-            '[%s %s %d %f %f %f %s %d %d %d %d %x ]'
-        )
+        const status = sscanf(statusBuffer, '[%s %s %d %f %f %f %s %d %d %d %d %x ]')
 
         return new Promise<I2CDriver.Status>((resolve, reject) => {
             const _status: I2CDriver.Status = {
@@ -95,11 +81,7 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public i2cSpeed(speed: number): Promise<void> {
-        assert.include(
-            [100, 400],
-            speed,
-            'Only 100 or 400 are the allowed values.'
-        )
+        assert.include([100, 400], speed, 'Only 100 or 400 are the allowed values.')
 
         let speedValue = { 100: '1', 400: '4' }[speed]
         return this._write(speedValue)
@@ -131,10 +113,7 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public async setPullups(controlBits: number): Promise<void> {
-        expect(
-            controlBits,
-            'Between 0 and 63, both inclusive, are the allowed values'
-        )
+        expect(controlBits, 'Between 0 and 63, both inclusive, are the allowed values')
             .to.be.least(0)
             .and.to.be.below(64)
 
@@ -160,11 +139,7 @@ export class I2CDriver extends SerialPortBase {
                 }
 
                 if (i2cAddress % 8 == 7) {
-                    console.info(
-                        (++line).toString().padStart(2, '0') +
-                            ') ' +
-                            printLine.join(' ')
-                    )
+                    console.info((++line).toString().padStart(2, '0') + ') ' + printLine.join(' '))
                     printLine = []
                 }
             }
@@ -179,11 +154,26 @@ export class I2CDriver extends SerialPortBase {
         })
     }
 
-    public start(): void {
-        console.log('jj')
+    public async i2cStart(i2cPort: number, rw: boolean = false): Promise<boolean> {
+        const port = String.fromCharCode((i2cPort << 1) | (rw ? 1 : 0))
+        await this._write('s' + port)
+
+        return this.i2cAck()
     }
-    public stop(): void {
-        console.log('jj')
+
+    public async i2cStop(): Promise<void> {
+        return this._write('p')
+    }
+
+    private async i2cAck(): Promise<boolean> {
+        const ack = await this._read()
+
+        return new Promise<boolean>((resolve, reject) => {
+            if (ack.length > 1) {
+                reject('Timeout')
+            }
+            resolve((parseInt(ack) & 1) != 0)
+        })
     }
 }
 
