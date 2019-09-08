@@ -50,7 +50,7 @@ export class I2CDriver extends SerialPortBase {
         const status = await this.getStatus()
 
         if (reset || (status.sda_state != 1 && status.scl_state != 1)) {
-            await this.reset()
+            await this.i2cReset()
             return this.getStatus()
         }
 
