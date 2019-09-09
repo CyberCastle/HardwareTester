@@ -80,33 +80,6 @@ export class I2CDriver extends SerialPortBase {
         })
     }
 
-    public i2cSpeed(speed: number): Promise<void> {
-        assert.include([100, 400], speed, 'Only 100 or 400 are the allowed values.')
-
-        let speedValue = { 100: '1', 400: '4' }[speed]
-        return this._write(speedValue)
-    }
-
-    public async i2cReset(): Promise<void> {
-        await this._write('x')
-        const response = await this._read()
-
-        return new Promise<void>((resolve, reject) => {
-            if (response !== '3') {
-                reject('I2C bus is busy')
-            } else {
-                this.i2cSpeed(100).then(() => {
-                    console.info('I2C Bus reset')
-                    resolve()
-                })
-            }
-        })
-    }
-
-    public async i2cRestore(): Promise<void> {
-        return this._write('i')
-    }
-
     public async reset(): Promise<void> {
         await this._write('_')
         return Timeout.sleep(500)
@@ -152,6 +125,33 @@ export class I2CDriver extends SerialPortBase {
         return new Promise((resolve, reject) => {
             resolve(hexAddressList)
         })
+    }
+
+    public i2cSpeed(speed: number): Promise<void> {
+        assert.include([100, 400], speed, 'Only 100 or 400 are the allowed values.')
+
+        let speedValue = { 100: '1', 400: '4' }[speed]
+        return this._write(speedValue)
+    }
+
+    public async i2cReset(): Promise<void> {
+        await this._write('x')
+        const response = await this._read()
+
+        return new Promise<void>((resolve, reject) => {
+            if (response !== '3') {
+                reject('I2C bus is busy')
+            } else {
+                this.i2cSpeed(100).then(() => {
+                    console.info('I2C Bus reset')
+                    resolve()
+                })
+            }
+        })
+    }
+
+    public async i2cRestore(): Promise<void> {
+        return this._write('i')
     }
 
     public async i2cStart(i2cPort: number, rw: boolean = false): Promise<boolean> {
