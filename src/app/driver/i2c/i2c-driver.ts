@@ -16,28 +16,28 @@ export class I2CDriver extends SerialPortBase {
     public async connect(reset: boolean = true): Promise<I2CDriver.Status> {
         await this._connect(this.errorCallback)
 
-        // May be in capture or monitor mode, send char and wait for 50 ms
-        await this._write('@')
+        // May be in capture or monitor mode, send '@' char and wait for 50 ms
+        await this._write(new Uint8Array([0x40]))
         Timeout.sleep(50)
 
-        // May be waiting up to 64 bytes of input (command code 0xff)
-        await this._write('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-
+        // May be waiting up to 64 bytes of input (command code 0xff). Send a array with 64 '@'.
+        await this._write(new Uint8Array(64).fill(0x40))
         await this._clearBuffer()
 
-        const ecoChars = ['A', String.fromCharCode(0xd), String.fromCharCode(0xa), 'Z']
+        // Echo chars are ASCII representations of: 'A', 'CR', 'LF' and 'Z'
+        const ecoChars = new Uint8Array([0x41, 0x0d, 0x0a, 0x5a])
 
         for (let i = 0; i < ecoChars.length; i++) {
             let ecoChar = await this.echo(ecoChars[i])
-            if (ecoChar.length > 1 || ecoChar != ecoChars[i]) {
+            if (ecoChar.length > 1 || ecoChar[0] != ecoChars[i]) {
                 return new Promise<I2CDriver.Status>((resolve, reject) => {
                     reject(new Error(`Echo test failed. Expected ${ecoChars[i]} but received ${ecoChar}`))
                 })
             }
         }
 
+        // Get status from device, after successful connection.
         const status = await this.getStatus()
-
         if (reset || (status.sda_state != 1 && status.scl_state != 1)) {
             await this.i2cReset()
             return this.getStatus()
@@ -48,16 +48,17 @@ export class I2CDriver extends SerialPortBase {
         })
     }
 
-    public async echo(char: string): Promise<string> {
-        assert.lengthOf(char, 1, 'Only 1 character is allowed.')
-        await this._write('e' + char)
+    public async echo(char: number): Promise<Uint8Array> {
+        // The echo command is 'e' (ASCII code: 0x65)
+        await this._write(new Uint8Array([0x65, char]))
         return this._read()
     }
 
     public async getStatus(): Promise<I2CDriver.Status> {
-        await this._write('?')
+        // The status command is 'e' (ASCII code: 0x3F)
+        await this._write(new Uint8Array([0x3f]))
         const statusBuffer = await this._read()
-        const status = sscanf(statusBuffer, '[%s %s %d %f %f %f %s %d %d %d %d %x ]')
+        const status = sscanf(statusBuffer.toString(), '[%s %s %d %f %f %f %s %d %d %d %d %x ]')
 
         return new Promise<I2CDriver.Status>((resolve, reject) => {
             const _status: I2CDriver.Status = {
@@ -81,7 +82,8 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public async reset(): Promise<void> {
-        await this._write('_')
+        // The reset command is '_' (ASCII code: 0x5F)
+        await this._write(new Uint8Array([0x5f]))
         return Timeout.sleep(500)
     }
 
@@ -90,22 +92,24 @@ export class I2CDriver extends SerialPortBase {
             .to.be.least(0)
             .and.to.be.below(64)
 
-        const controlBitsChar = String.fromCharCode(controlBits)
-        return this._write('u' + controlBitsChar)
+        // The pullups setting command is 'u' (ASCII code: 0x75)
+        return this._write(new Uint8Array([0x75, controlBits]))
     }
 
     public async scan(print: boolean = false): Promise<number[]> {
-        await this._write('d')
+        // The i2c port scan command is 'd' (ASCII code: 0x64)
+        await this._write(new Uint8Array([0x64]))
         const bitAddressList = [...(await this._read(30))]
         const hexAddressList: number[] = []
         let printLine: string[] = []
         let line = 0
 
-        bitAddressList.map((bit, index) => {
+        bitAddressList.map((bitAddress, index) => {
             let i2cAddress = index + 8
 
             if (print) {
-                if (bit == '1') {
+                // Each address found is indicated with a '1' character (ASCII code: 0x31)
+                if (bitAddress == 0x31) {
                     printLine.push(i2cAddress.toString(16).toUpperCase())
                 } else {
                     printLine.push('--')
@@ -117,7 +121,7 @@ export class I2CDriver extends SerialPortBase {
                 }
             }
 
-            if (bit == '1') {
+            if (bitAddress == 0x31) {
                 hexAddressList.push(i2cAddress)
             }
         })
@@ -130,16 +134,19 @@ export class I2CDriver extends SerialPortBase {
     public i2cSpeed(speed: number): Promise<void> {
         assert.include([100, 400], speed, 'Only 100 or 400 are the allowed values.')
 
-        let speedValue = { 100: '1', 400: '4' }[speed]
-        return this._write(speedValue)
+        // The speed settings command is 1 or 4 (ASCII code: 0x31 y 0x34), for 100KHz/400KHz respectively
+        const speedValue = { 100: 0x31, 400: 0x34 }[speed]
+        return this._write(new Uint8Array([speedValue]))
     }
 
     public async i2cReset(): Promise<void> {
-        await this._write('x')
+        // The reset i2c bus command is 'x' (ASCII code: 0x78)
+        await this._write(new Uint8Array([0x78]))
         const response = await this._read()
 
         return new Promise<void>((resolve, reject) => {
-            if (response !== '3') {
+            // If reset is successful, the device return a '3' character (ASCII code: 0x33)
+            if (response.length > 1 || response[0] != 0x33) {
                 reject('I2C bus is busy')
             } else {
                 this.i2cSpeed(100).then(() => {
@@ -151,19 +158,43 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public async i2cRestore(): Promise<void> {
-        return this._write('i')
+        // The restore i2c bus command (leave bitmang) is 'i' (ASCII code: 0x69)
+        return this._write(new Uint8Array([0x69]))
     }
 
     public async i2cStart(i2cPort: number, rw: boolean = false): Promise<boolean> {
-        const port = String.fromCharCode((i2cPort << 1) | (rw ? 1 : 0))
-        await this._write('s' + port)
+        // The start i2c comunications command is 's' (ASCII code: 0x73)
+        const port = (i2cPort << 1) | (rw ? 1 : 0)
+        await this._write(new Uint8Array([0x73, port]))
 
         return this.i2cAck()
     }
 
     public async i2cStop(): Promise<void> {
-        return this._write('p')
+        // The stop i2c comunications command is 'p' (ASCII code: 0x70)
+        return this._write(new Uint8Array([0x70]))
     }
+
+    /*public async i2cWrite(dataArray: Uint8Array): Promise<boolean> {
+        const dataArraySize = dataArray.length
+        let ack: boolean
+
+        for (let i = 0; i < dataArraySize; i += 64) {
+            let len = dataArraySize - i < 64 ? dataArraySize - i : 64
+            let data = String.fromCharCode(0xc0 + len - 1) + Buffer.from(dataArray).toString('binary')
+
+
+
+            await this._write(data)
+            ack = await this.i2cAck()
+        }
+
+        return new Promise<boolean>((resolve, reject) => {
+            resolve(ack)
+        })
+    }*/
+
+    public async i2cRead(): Promise<void> {}
 
     private async i2cAck(): Promise<boolean> {
         const ack = await this._read()
@@ -172,7 +203,7 @@ export class I2CDriver extends SerialPortBase {
             if (ack.length > 1) {
                 reject('Timeout')
             }
-            resolve((parseInt(ack) & 1) != 0)
+            resolve((ack[0] & 1) != 0)
         })
     }
 }

@@ -3,11 +3,13 @@ import { Timeout } from '../../utils/await-timeout'
 import * as SerialPort from 'serialport'
 
 export abstract class SerialPortBase {
-    protected constructor(private _portService: SerialPortService, private _portName: string, private _baudRate: number) {}
-
     private _port: SerialPort
-    private buffer: string = ''
+    private buffer: Uint8Array
     private waitForResponseTime: number = 20
+
+    protected constructor(private _portService: SerialPortService, private _portName: string, private _baudRate: number) {
+        this.buffer = new Uint8Array(0)
+    }
 
     protected async _connect(errorCallback?: SerialPortBase.ErrorCallback): Promise<void> {
         return new Promise<void>((resolve, reject) => {
@@ -24,8 +26,7 @@ export abstract class SerialPortBase {
             )
 
             this._port.on('data', data => {
-                data.toString('binary')
-                this.buffer += data
+                this.buffer = Buffer.concat([this.buffer, data], this.buffer.length + data.length)
             })
 
             this._port.on('error', error => {
@@ -40,9 +41,13 @@ export abstract class SerialPortBase {
         })
     }
 
-    protected async _write(text: string): Promise<void> {
+    protected _writeStr(data: string): Promise<void> {
+        return this._write(Buffer.from(data))
+    }
+
+    protected async _write(data: Uint8Array): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this._port.write(text, 'binary', error => {
+            this._port.write(Buffer.from(data), error => {
                 if (error != undefined) {
                     reject(error)
                 } else {
@@ -58,11 +63,11 @@ export abstract class SerialPortBase {
         })
     }
 
-    protected async _read(waitTime: number = 0): Promise<string> {
+    protected async _read(waitTime: number = 0): Promise<Uint8Array> {
         await Timeout.sleep(waitTime < this.waitForResponseTime ? this.waitForResponseTime : waitTime)
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<Uint8Array>((resolve, reject) => {
             const _buffer = this.buffer
-            this.buffer = ''
+            this.buffer = new Uint8Array(0)
             resolve(_buffer)
         })
     }
@@ -70,7 +75,7 @@ export abstract class SerialPortBase {
     protected async _clearBuffer(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this._port.flush(error => {
-                this.buffer = ''
+                this.buffer = new Uint8Array(0)
                 if (error != undefined) {
                     reject(error)
                 } else {
