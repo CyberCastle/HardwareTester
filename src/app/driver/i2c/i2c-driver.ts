@@ -164,7 +164,7 @@ export class I2CDriver extends SerialPortBase {
 
     public async i2cStart(i2cPort: number, rw: boolean = false): Promise<boolean> {
         // The start i2c comunications command is 's' (ASCII code: 0x73)
-        const port = (i2cPort << 1) | (rw ? 1 : 0)
+        const port = (i2cPort << 1) | (!rw ? 1 : 0) // read (1),  write (0)
         await this._write(new Uint8Array([0x73, port]))
 
         return this.i2cAck()
@@ -175,16 +175,15 @@ export class I2CDriver extends SerialPortBase {
         return this._write(new Uint8Array([0x70]))
     }
 
-    /*public async i2cWrite(dataArray: Uint8Array): Promise<boolean> {
+    public async i2cWrite(dataArray: Uint8Array): Promise<boolean> {
         const dataArraySize = dataArray.length
         let ack: boolean
 
         for (let i = 0; i < dataArraySize; i += 64) {
             let len = dataArraySize - i < 64 ? dataArraySize - i : 64
-            let data = String.fromCharCode(0xc0 + len - 1) + Buffer.from(dataArray).toString('binary')
-
-
-
+            let data = new Uint8Array(len + 1)
+            data[0] = 0xc0 + len - 1
+            data.set(dataArray.slice(i, len - 1), i + 1)
             await this._write(data)
             ack = await this.i2cAck()
         }
@@ -192,9 +191,51 @@ export class I2CDriver extends SerialPortBase {
         return new Promise<boolean>((resolve, reject) => {
             resolve(ack)
         })
-    }*/
+    }
 
-    public async i2cRead(): Promise<void> {}
+    public async i2cRead(numBytes: number): Promise<Uint8Array> {
+        const dataArray = new Uint8Array(numBytes)
+
+        for (let i = 0; i < numBytes; i += 64) {
+            let len = numBytes - i < 64 ? numBytes - i : 64
+            await this._write(new Uint8Array([0x80 + len - 1]))
+            let response = await this._read(30)
+            dataArray.set(response.slice(0, len), i)
+        }
+
+        return new Promise<Uint8Array>((resolve, reject) => {
+            resolve(dataArray)
+        })
+    }
+
+    public async i2cRegWrite(i2cPort: number, i2cRegister: number, data?: number | Uint8Array): Promise<boolean> {
+        // Start device
+        let ack = await this.i2cStart(i2cPort, true)
+
+        // Select register
+        if (ack) {
+            ack = await this.i2cWrite(new Uint8Array([i2cRegister]))
+        }
+
+        // Write register
+        if (ack) {
+            if (typeof data === 'number') {
+                ack = await this.i2cWrite(new Uint8Array([data]))
+            } else {
+                ack = await this.i2cWrite(data)
+            }
+        }
+
+        // Stop device
+        await this.i2cStop()
+        return ack
+    }
+
+    public async i2cRegRead(i2cPort: number, i2cRegister: number, numBytes: number): Promise<Uint8Array> {
+        // The read i2c register command is 'r' (ASCII code: 0x72)
+        await this._write(new Uint8Array([0x72, i2cPort, i2cRegister, numBytes]))
+        return this.i2cRead(numBytes)
+    }
 
     private async i2cAck(): Promise<boolean> {
         const ack = await this._read()
