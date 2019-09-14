@@ -183,7 +183,7 @@ export class I2CDriver extends SerialPortBase {
             let len = dataArraySize - i < 64 ? dataArraySize - i : 64
             let data = new Uint8Array(len + 1)
             data[0] = 0xc0 + len - 1
-            data.set(dataArray.slice(i, len - 1), i + 1)
+            data.set(dataArray.slice(i, len), i + 1)
             await this._write(data)
             ack = await this.i2cAck()
         }
