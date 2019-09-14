@@ -1,4 +1,5 @@
 import { I2CDriver } from './../i2c/i2c-driver'
+import { Timeout } from '../../utils/await-timeout'
 
 /**
  * Technical documentation: https://www.adafruit.com/datasheets/HMC5883L_3-Axis_Digital_Compass_IC.pdf
@@ -18,10 +19,13 @@ export class HMC5883L {
     // Configuration Register B: See pp13 of the technical documentation.
     public readonly HMC5883L_SCALE_REGISTER = 0x01
     public readonly DEFAULT_SCALE = 0.88
+
+    // Configuration Mode Register: See pp14 of the technical documentation.
     public readonly HMC5883L_MODE_REGISTER = 0x02
     public readonly HMC5883L_MODE_MEASURE_CONTINUOUS = 0x00
     public readonly HMC5883L_MODE_MEASUREMENT_SINGLE_SHOT = 0x01
-    public readonly HMC5883L_MODE_MEASUREMENT_IDLE = 0x03
+    public readonly HMC5883L_MODE_MEASUREMENT_IDLE = 0x02
+    public readonly HMC5883L_MODE_MEASUREMENT_SLEEP = 0x03
 
     public readonly DEFAULT_CALIBRATION: HMC5883L.CalibrationData = {
         offset: {
@@ -54,19 +58,20 @@ export class HMC5883L {
     }
 
     private readonly scaleMap = {
-        0.88: { reg: 0, scalar: 0.73 } /* Default value */,
-        1.3: { reg: 1, scalar: 0.92 },
-        1.9: { reg: 2, scalar: 1.22 },
-        2.5: { reg: 3, scalar: 1.52 },
-        4.0: { reg: 4, scalar: 2.27 },
-        4.7: { reg: 5, scalar: 2.56 },
-        5.6: { reg: 6, scalar: 3.03 },
-        8.1: { reg: 7, scalar: 4.35 },
+        0.88: { reg: 0, scalar: 0.73 }, // 0.88 Gauss =  88 uTesla --> Default value
+        1.3: { reg: 1, scalar: 0.92 }, // 1.3 Gauss = 130 uTesla
+        1.9: { reg: 2, scalar: 1.22 }, // 1.9 Gauss = 190 uTesla
+        2.5: { reg: 3, scalar: 1.52 }, // 2.5 Gauss = 250 uTesla
+        4.0: { reg: 4, scalar: 2.27 }, // 4.0 Gauss = 400 uTesla
+        4.7: { reg: 5, scalar: 2.56 }, // 4.7 Gauss = 470 uTesla
+        5.6: { reg: 6, scalar: 3.03 }, // 5.6 Gauss = 560 uTesla
+        8.1: { reg: 7, scalar: 4.35 }, // 8.1 Gauss = 810 uTesla
     }
 
     private declination: number
     private scale: any
     private config_A_value: number
+    public isContinuousReader: boolean
 
     /**
      * Constructor
@@ -85,11 +90,14 @@ export class HMC5883L {
             this.options = this.DEFAULT_OPTIONS
         }
 
+        // Continuos Reader stopped
+        this.isContinuousReader = false
+
         // Set up the scale setting
         this.scale = this.scaleMap[this.options.scale]
 
         // Set up the config_A_value
-        this.config_A_value = (this.DEFAULT_CFG_A_MA << 5) | (this.options.sampleRate << 2)
+        this.config_A_value = (this.DEFAULT_CFG_A_MA << 5) | (this.sampleRateMap[this.options.sampleRate] << 2)
 
         // Set up declination
         this.declination = (this.options.declination / 180) * Math.PI
@@ -157,6 +165,22 @@ export class HMC5883L {
 
             resolve(axes)
         })
+    }
+
+    public async startContinuousReader(cb: (axesData: HMC5883L.Axis) => void): Promise<void> {
+        if (this.isContinuousReader) {
+            return
+        }
+
+        this.isContinuousReader = true
+        while (this.isContinuousReader) {
+            cb(await this.getRawValues())
+            await Timeout.sleep(50)
+        }
+    }
+
+    public stopContinuousReader(): void {
+        this.isContinuousReader = false
     }
 }
 
