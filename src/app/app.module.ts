@@ -1,28 +1,24 @@
 import 'reflect-metadata'
 import '../polyfills'
 
+import { AppComponent } from './app.component'
+import { AppRoutingModule } from './app-routing.module'
 import { BrowserModule } from '@angular/platform-browser'
-import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core'
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { FormsModule } from '@angular/forms'
 import { HttpClientModule, HttpClient } from '@angular/common/http'
-import { CoreModule } from './core/core.module'
-import { AngularMaterialModule } from './core/angular-material.module'
-import { SharedModule } from './shared/shared.module'
-
-import { AppRoutingModule } from './app-routing.module'
+import { NgModule } from '@angular/core'
 
 // NG Translate
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core'
 import { TranslateHttpLoader } from '@ngx-translate/http-loader'
 
-import { AppComponent } from './app.component'
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
-
-// Modals
-import { AboutComponent } from './modal/about/about.component'
-
-// Sections
-import { MainSectionComponent } from './sections/main/main-section.component'
+// App modules
+import { CoreModule } from './core/core.module'
+import { DriverModule } from './driver/driver.module'
+import { ModalsModule } from './modal/modals.module'
+import { SectionsModule } from './sections/sections.module'
+import { SharedModule } from './shared/shared.module'
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -30,12 +26,16 @@ export function HttpLoaderFactory(http: HttpClient) {
 }
 
 @NgModule({
-    declarations: [AppComponent, AboutComponent, MainSectionComponent],
+    declarations: [AppComponent],
     imports: [
         BrowserModule,
+        BrowserAnimationsModule,
         FormsModule,
         HttpClientModule,
         CoreModule,
+        DriverModule,
+        ModalsModule,
+        SectionsModule,
         SharedModule,
         AppRoutingModule,
         TranslateModule.forRoot({
@@ -45,12 +45,8 @@ export function HttpLoaderFactory(http: HttpClient) {
                 deps: [HttpClient],
             },
         }),
-        AngularMaterialModule,
-        BrowserAnimationsModule,
     ],
     providers: [],
     bootstrap: [AppComponent],
-    schemas: [CUSTOM_ELEMENTS_SCHEMA],
-    entryComponents: [AboutComponent],
 })
 export class AppModule {}
