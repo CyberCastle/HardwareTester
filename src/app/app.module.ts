@@ -20,7 +20,9 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 
 // Modals
 import { AboutComponent } from './modal/about/about.component'
-import { HomeComponent } from './home/home.component'
+
+// Sections
+import { MainSectionComponent } from './sections/main/main-section/main-section.component'
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -28,7 +30,7 @@ export function HttpLoaderFactory(http: HttpClient) {
 }
 
 @NgModule({
-    declarations: [AppComponent, AboutComponent, HomeComponent],
+    declarations: [AppComponent, AboutComponent, MainSectionComponent],
     imports: [
         BrowserModule,
         FormsModule,
