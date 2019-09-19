@@ -22,7 +22,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations'
 import { AboutComponent } from './modal/about/about.component'
 
 // Sections
-import { MainSectionComponent } from './sections/main/main-section/main-section.component'
+import { MainSectionComponent } from './sections/main/main-section.component'
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
