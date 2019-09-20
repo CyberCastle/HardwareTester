@@ -29,6 +29,11 @@ export class ElectronService {
 
             this.childProcess = window.require('child_process')
             this.fs = window.require('fs')
+
+            // Disable eval
+            global.eval = function() {
+                throw new Error(`Sorry, this app does not support window.eval().`)
+            }
         }
     }
 }
