@@ -11,9 +11,9 @@ import { AboutComponent } from './modal/about/about.component'
 })
 export class AppComponent implements OnInit {
     constructor(
-        public dialog: MatDialog,
-        public ngZone: NgZone,
-        public electronService: ElectronService,
+        private dialog: MatDialog,
+        private ngZone: NgZone,
+        private electronService: ElectronService,
         private translate: TranslateService
     ) {
         translate.setDefaultLang('en')
