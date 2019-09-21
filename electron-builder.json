@@ -31,6 +31,5 @@
         "icon": "dist",
         "target": ["AppImage"]
     },
-    "nodeGypRebuild": "true",
-    "asar": "false"
+    "nodeGypRebuild": "true"
 }
