@@ -31,6 +31,7 @@ function createWindow() {
             nodeIntegrationInWorker: true,
             backgroundThrottling: false,
             disableHtmlFullscreenWindowResize: true,
+            textAreasAreResizable: false,
         },
     })
 
@@ -162,6 +163,29 @@ try {
                 createWindow()
             }
         })
+
+        if (!dev) {
+            /*
+             * Implementation of some safety tips, obtained from here:
+             * https://medium.com/@kmdchainmakers/making-chainswap-dex-more-secure-using-agama-hack-as-a-lesson-cb6b7886ef7a
+             */
+
+            // Disable navigation
+            app.on('web-contents-created', (_, contents) => {
+                contents.on('will-navigate', (event, navigationUrl) => {
+                    console.warn(`Block navigate to ${navigationUrl}`)
+                    event.preventDefault()
+                })
+            })
+
+            // Disable the creation of new windows
+            app.on('web-contents-created', (_, contents) => {
+                contents.on('new-window', async (event, navigationUrl) => {
+                    console.warn(`Block open new window ${navigationUrl}`)
+                    event.preventDefault()
+                })
+            })
+        }
     }
 } catch (e) {
     // Catch Error
