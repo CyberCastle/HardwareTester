@@ -1,0 +1,52 @@
+<mat-card>
+    <mat-card-subtitle>Simple card</mat-card-subtitle>
+    <mat-card-actions>
+        <md-toolbar color="primary">
+            <mat-toolbar-row>
+                <button mat-icon-button (click)="openScript()">
+                    <fa-icon icon="folder-open"></fa-icon>
+                </button>
+                <button mat-icon-button (click)="saveScript()">
+                    <fa-icon icon="save"></fa-icon>
+                </button>
+                <button mat-icon-button (click)="runScript()">
+                    <fa-icon icon="play"></fa-icon>
+                </button>
+                <button mat-icon-button (click)="stopScript()">
+                    <fa-icon icon="stop"></fa-icon>
+                </button>
+                <button mat-icon-button (click)="formatScript()">
+                    <fa-icon icon="paint-roller"></fa-icon>
+                </button>
+            </mat-toolbar-row>
+        </md-toolbar>
+    </mat-card-actions>
+    <mat-card-content>
+        <ngx-codemirror
+            [(ngModel)]="scriptContent"
+            [options]="{
+                lineWrapping: true,
+                lineNumbers: true,
+                textWrapping: true,
+                readOnly: false,
+                extraKeys: { 'Ctrl-Space': 'autocomplete' },
+                foldGutter: true,
+                mode: 'javascript',
+                matchBrackets: true,
+                autoCloseBrackets: true,
+                theme: 'solarized',
+                gutters: ['CodeMirror-lint-markers', 'CodeMirror-foldgutter'],
+                lint: true,
+                showHint: true,
+                autoFocus: true,
+                tabSize: 4,
+                lint: {
+                    esversion: 6
+                }
+            }"
+            (ngModelChange)="handleChange($event)"
+            [autoFocus]="true"
+        >
+        </ngx-codemirror>
+    </mat-card-content>
+</mat-card>
