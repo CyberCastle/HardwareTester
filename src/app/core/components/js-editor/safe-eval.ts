@@ -5,7 +5,6 @@ import { transform, types, NodePath } from '@babel/core'
 // 5 seconds for timeout
 var timeout = 5000
 export class SafeEval {
-    
     constructor(private portService: SerialPortService) {}
 
     public run(scriptContent: string) {
@@ -49,9 +48,8 @@ export class SafeEval {
 
     // Code based in piece obtained from here: https://medium.com/@bvjebin/js-infinite-loops-killing-em-e1c2f5f2db7f
     private loopcontrol() {
-
         // Code definition for break infinite loops
-        function transformLoop  (path: NodePath){
+        function transformLoop(path: NodePath) {
             let variableName = path.scope.generateUidIdentifier('timer')
             let declaration = types.declareVariable(variableName)
             path.scope.parent.push(declaration)
@@ -63,7 +61,7 @@ export class SafeEval {
             path.insertBefore(types.expressionStatement(definition))
             const lhs = types.parenthesizedExpression(types.binaryExpression('+', variableName, types.numericLiteral(timeout)))
 
-            let bodyNode: NodePath  = (path.get('body') as NodePath)
+            let bodyNode: NodePath = path.get('body') as NodePath
             bodyNode.insertAfter(
                 types.ifStatement(
                     types.binaryExpression(
@@ -77,7 +75,7 @@ export class SafeEval {
             )
         }
 
-        // Code injection for break infinite loops 
+        // Code injection for break infinite loops
         return {
             visitor: {
                 WhileStatement: transformLoop,
