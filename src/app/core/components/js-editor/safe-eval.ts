@@ -1,17 +1,17 @@
 import { Context, RunningScriptOptions, runInNewContext } from 'vm'
 import { SerialPortService } from '../../../driver/serialport/serial-port.service'
-import * as babel from '@babel/core'
+import { transform, types, NodePath } from '@babel/core'
 
+// 5 seconds for timeout
+var timeout = 5000
 export class SafeEval {
-    // 2 seconds for timeout
-    private readonly timeout = 2000
-
+    
     constructor(private portService: SerialPortService) {}
 
     public run(scriptContent: string) {
         const options: RunningScriptOptions = {
             displayErrors: true,
-            timeout: this.timeout,
+            timeout: timeout,
         }
 
         const sandboxContext: Context = {
@@ -36,47 +36,53 @@ export class SafeEval {
 
         // Code injection for kill possibles infinite loops
         // Idea obtained from here: https://medium.com/@bvjebin/js-infinite-loops-killing-em-e1c2f5f2db7f
-        scriptContent = babel.transform(scriptContent, {
+        scriptContent = transform(scriptContent, {
             plugins: [this.loopcontrol],
         }).code
 
+        // console.log(scriptContent)
         runInNewContext(scriptContent, sandboxContext, options)
         return sandboxContext[resultKey]
     }
 
-    public async cancel(): Promise<number> {
-        return null
-    }
+    public cancel() {}
 
-    // Piece of code obtained from here: https://medium.com/@bvjebin/js-infinite-loops-killing-em-e1c2f5f2db7f
-    loopcontrol(babel: { types: any }) {
-        const t = babel.types
+    // Code based in piece obtained from here: https://medium.com/@bvjebin/js-infinite-loops-killing-em-e1c2f5f2db7f
+    private loopcontrol() {
+
+        // Code definition for break infinite loops
+        function transformLoop  (path: NodePath){
+            let variableName = path.scope.generateUidIdentifier('timer')
+            let declaration = types.declareVariable(variableName)
+            path.scope.parent.push(declaration)
+            let definition = types.assignmentExpression(
+                '=',
+                variableName,
+                types.callExpression(types.memberExpression(types.identifier('Date'), types.identifier('now')), [])
+            )
+            path.insertBefore(types.expressionStatement(definition))
+            const lhs = types.parenthesizedExpression(types.binaryExpression('+', variableName, types.numericLiteral(timeout)))
+
+            let bodyNode: NodePath  = (path.get('body') as NodePath)
+            bodyNode.insertAfter(
+                types.ifStatement(
+                    types.binaryExpression(
+                        '>',
+                        types.callExpression(types.memberExpression(types.identifier('Date'), types.identifier('now')), []),
+                        lhs
+                    ),
+                    types.throwStatement(types.stringLiteral(`Script execution timed out after ${timeout}ms`)),
+                    null
+                )
+            )
+        }
+
+        // Code injection for break infinite loops 
         return {
             visitor: {
-                WhileStatement: function transformWhile(path: any) {
-                    let variableName = path.scope.generateUidIdentifier('timer')
-                    let declaration = t.declareVariable(variableName)
-                    path.scope.parent.push(declaration)
-                    let definition = t.assignmentExpression(
-                        '=',
-                        variableName,
-                        t.callExpression(t.memberExpression(t.identifier('Date'), t.identifier('now')), [])
-                    )
-                    path.insertBefore(t.expressionStatement(definition))
-                    const lhs = t.parenthesizedExpression(t.binaryExpression('+', variableName, t.NumericLiteral(3000)))
-                    path.get('body').pushContainer(
-                        'body',
-                        t.ifStatement(
-                            t.binaryExpression(
-                                '>',
-                                t.callExpression(t.memberExpression(t.identifier('Date'), t.identifier('now')), []),
-                                lhs
-                            ),
-                            t.throwStatement(t.stringLiteral('Script execution timed out after 3000ms')),
-                            null
-                        )
-                    )
-                },
+                WhileStatement: transformLoop,
+                ForStatement: transformLoop,
+                DoWhileStatement: transformLoop,
             },
         }
     }
