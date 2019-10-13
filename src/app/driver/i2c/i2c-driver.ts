@@ -99,7 +99,7 @@ export class I2CDriver extends SerialPortBase {
     public async scan(print: boolean = false): Promise<number[]> {
         // The i2c port scan command is 'd' (ASCII code: 0x64)
         await this._write(new Uint8Array([0x64]))
-        const bitAddressList = [...(await this._read(30))]
+        const bitAddressList = [...(await this._read(30))] // wait 30ms for response
         const hexAddressList: number[] = []
         let printLine: string[] = []
         let line = 0
