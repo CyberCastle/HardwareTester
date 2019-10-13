@@ -1,6 +1,12 @@
 @import 'app-theme.scss';
 @import '~material-design-icons/iconfont/material-icons.css';
 @import '~typeface-roboto/index.css';
+@import '~typeface-roboto-mono/index.css';
+
+@font-face {
+    font-family: 'monaco';
+    src: url('assets/fonts/monaco.ttf');
+}
 
 /* You can add global styles to this file, and also import other style files */
 html,

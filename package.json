@@ -106,6 +106,7 @@
         "prettier": "^1.18.2",
         "scanf": "^1.0.2",
         "serialport": "7.1.5",
-        "typeface-roboto": "0.0.75"
+        "typeface-roboto": "0.0.75",
+        "typeface-roboto-mono": "0.0.75"
     }
 }

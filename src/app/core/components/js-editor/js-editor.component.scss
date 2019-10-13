@@ -4,6 +4,10 @@
 @import '~codemirror/addon/hint/show-hint';
 @import '~codemirror/addon/lint/lint';
 
+.CodeMirror {
+    font-family: 'Roboto Mono' !important;
+    font-size: 13px !important;
+}
 .button-style {
     font-size: 20px;
 }
@@ -13,6 +17,8 @@
 }
 
 .script-output-section {
+    font-family: 'Roboto Mono';
+    font-size: 13px !important;
     min-width: 100%;
     min-height: 25em;
 }
