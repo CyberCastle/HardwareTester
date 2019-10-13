@@ -6,7 +6,7 @@ import { transform, types, NodePath } from '@babel/core'
 var timeout = 5000
 // Based in this piece of code: https://github.com/hacksparrow/safe-eval/blob/master/index.js
 export class SafeEval {
-    constructor(private portService: SerialPortService, private sandboxContext: Context) {}
+    constructor(private sandboxContext: Context) {}
 
     public run(scriptContent: string) {
         const options: RunningScriptOptions = {

@@ -36,22 +36,21 @@ export class JsEditorComponent implements OnInit {
     public scriptOutput: string = ''
     private static _scriptOutput: string = ''
     private safeEval: SafeEval
-    private portService: SerialPortService
 
-    constructor(private service: ElectronService, private ngZone: NgZone) {
+    constructor(private service: ElectronService, private portService: SerialPortService, private ngZone: NgZone) {
         ;(<any>window).JSHINT = require('jshint').JSHINT
         this.electronBrowserWindow = service.remote.BrowserWindow
         this.electronDialog = service.remote.dialog
 
         const sandboxContext: Context = {
             ngZone: ngZone,
-            portService: SerialPortService,
+            portService: portService,
             console: {
                 log: JsEditorComponent.writeOutput,
             },
         }
 
-        this.safeEval = new SafeEval(this.portService, sandboxContext)
+        this.safeEval = new SafeEval(sandboxContext)
     }
     ngOnInit() {}
 
