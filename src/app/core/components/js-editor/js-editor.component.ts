@@ -1,4 +1,5 @@
 import { Component, ViewEncapsulation, OnInit, NgZone } from '@angular/core'
+import { Dialog, BrowserWindow, OpenDialogOptions, OpenDialogReturnValue, SaveDialogOptions, SaveDialogReturnValue } from 'electron'
 import { ElectronService } from '../../services'
 import { SafeEval } from './safe-eval'
 import { readFile, writeFile } from 'fs'
@@ -27,7 +28,8 @@ import 'codemirror/mode/javascript/javascript'
     encapsulation: ViewEncapsulation.None,
 })
 export class JsEditorComponent implements OnInit {
-    private electronDialog: Electron.Dialog
+    private electronBrowserWindow: typeof BrowserWindow
+    private electronDialog: Dialog
     private scriptFilePath: string = null
     public scriptContent: string = null
     private safeEval: SafeEval
@@ -35,28 +37,25 @@ export class JsEditorComponent implements OnInit {
 
     constructor(private service: ElectronService, private ngZone: NgZone) {
         ;(<any>window).JSHINT = require('jshint').JSHINT
+        this.electronBrowserWindow = service.remote.BrowserWindow
         this.electronDialog = service.remote.dialog
         this.safeEval = new SafeEval(this.portService)
     }
-    ngOnInit() {
-        console.log(process)
-
-        console.log(global['window'])
-    }
+    ngOnInit() {}
 
     handleChange($event: any) {
         //console.log('ngModelChange', $event)
     }
 
     openScript(): void {
-        const openDialogOptions: Electron.OpenDialogOptions = {
+        const openDialogOptions: OpenDialogOptions = {
             properties: ['openFile', 'treatPackageAsDirectory'],
             filters: [{ name: 'JS Scripts', extensions: ['js'] }],
         }
 
         this.electronDialog
-            .showOpenDialog(openDialogOptions)
-            .then((result: Electron.OpenDialogReturnValue) => {
+            .showOpenDialog(this.electronBrowserWindow.getFocusedWindow(), openDialogOptions)
+            .then((result: OpenDialogReturnValue) => {
                 if (result.filePaths.length == 0) {
                     return
                 }
@@ -65,6 +64,66 @@ export class JsEditorComponent implements OnInit {
             .catch((reason: any) => {
                 console.error(reason)
             })
+    }
+
+    async saveScript(): Promise<boolean> {
+        if (this.scriptFilePath) {
+            this._writeScript()
+            return
+        }
+
+        const saveDialogOptions: SaveDialogOptions = {
+            filters: [{ name: 'JS Scripts', extensions: ['js'] }],
+        }
+
+        await this.electronDialog
+            .showSaveDialog(this.electronBrowserWindow.getFocusedWindow(), saveDialogOptions)
+            .then((result: SaveDialogReturnValue) => {
+                if (result.canceled) {
+                    return false
+                }
+                this.scriptFilePath = result.filePath
+                this._writeScript()
+            })
+            .catch((reason: any) => {
+                console.error(reason)
+            })
+        return false
+    }
+
+    async runScript() {
+        if (this.scriptContent == null || this.scriptContent.length <= 4) {
+            return
+        }
+
+        if (!this.scriptFilePath) {
+            if (!(await this.saveScript())) {
+                return
+            }
+        } else {
+            await this._writeScript()
+        }
+
+        const result = this.safeEval.run(this.scriptContent)
+        console.log(result)
+    }
+
+    stopScript(): void {
+        this.safeEval.cancel()
+    }
+
+    formatScript(): void {
+        if (this.scriptContent == null || this.scriptContent.length <= 4) {
+            return
+        }
+        const prettierOptions: Options = {
+            endOfLine: 'lf',
+            parser: 'babel',
+            printWidth: 140,
+            tabWidth: 4,
+            singleQuote: true,
+        }
+        this.scriptContent = format(this.scriptContent, prettierOptions)
     }
 
     private _readScript(filePath: string) {
@@ -83,65 +142,16 @@ export class JsEditorComponent implements OnInit {
         })
     }
 
-    saveScript(): void {
-        if (this.scriptFilePath) {
-            this._writeScript()
-            return
-        }
-
-        const saveDialogOptions: Electron.SaveDialogOptions = {
-            filters: [{ name: 'JS Scripts', extensions: ['js'] }],
-        }
-
-        this.electronDialog
-            .showSaveDialog(saveDialogOptions)
-            .then((result: Electron.SaveDialogReturnValue) => {
-                if (result.canceled) {
-                    return
-                }
-                this.scriptFilePath = result.filePath
-                this._writeScript()
-            })
-            .catch((reason: any) => {
-                console.error(reason)
-            })
-    }
-
     private async _writeScript(): Promise<void> {
         const result: Promise<void> = new Promise((resolve, reject) => {
             writeFile(this.scriptFilePath, this.scriptContent, (error: NodeJS.ErrnoException) => {
                 if (error) {
                     reject(error)
                 }
-                console.log('saved!!!')
                 resolve()
             })
         })
 
         return result
-    }
-
-    async runScript() {
-        await this._writeScript()
-        if (!this.scriptFilePath) {
-            return
-        }
-        const result = this.safeEval.run(this.scriptContent)
-        console.log(result)
-    }
-
-    stopScript(): void {
-        this.safeEval.cancel()
-    }
-
-    formatScript(): void {
-        const prettierOptions: Options = {
-            endOfLine: 'lf',
-            parser: 'babel',
-            printWidth: 140,
-            tabWidth: 4,
-            singleQuote: true,
-        }
-        this.scriptContent = format(this.scriptContent, prettierOptions)
     }
 }
