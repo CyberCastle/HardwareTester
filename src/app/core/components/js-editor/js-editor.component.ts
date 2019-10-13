@@ -20,6 +20,7 @@ import 'codemirror/addon/hint/javascript-hint'
 import 'codemirror/addon/lint/lint'
 import 'codemirror/addon/lint/javascript-lint'
 import 'codemirror/mode/javascript/javascript'
+import { Context } from 'vm'
 
 @Component({
     selector: 'app-js-editor',
@@ -32,6 +33,8 @@ export class JsEditorComponent implements OnInit {
     private electronDialog: Dialog
     private scriptFilePath: string = null
     public scriptContent: string = null
+    public scriptOutput: string = ''
+    private static _scriptOutput: string = ''
     private safeEval: SafeEval
     private portService: SerialPortService
 
@@ -39,7 +42,16 @@ export class JsEditorComponent implements OnInit {
         ;(<any>window).JSHINT = require('jshint').JSHINT
         this.electronBrowserWindow = service.remote.BrowserWindow
         this.electronDialog = service.remote.dialog
-        this.safeEval = new SafeEval(this.portService)
+
+        const sandboxContext: Context = {
+            ngZone: ngZone,
+            portService: SerialPortService,
+            console: {
+                log: JsEditorComponent.writeOutput,
+            },
+        }
+
+        this.safeEval = new SafeEval(this.portService, sandboxContext)
     }
     ngOnInit() {}
 
@@ -103,9 +115,12 @@ export class JsEditorComponent implements OnInit {
         } else {
             await this._writeScript()
         }
+        JsEditorComponent.writeOutput(this.safeEval.run(this.scriptContent))
 
-        const result = this.safeEval.run(this.scriptContent)
-        console.log(result)
+        // More info here: https://stackoverflow.com/a/41255540/11454077
+        this.ngZone.run(() => {
+            this.scriptOutput = JsEditorComponent._scriptOutput
+        })
     }
 
     stopScript(): void {
@@ -120,10 +135,24 @@ export class JsEditorComponent implements OnInit {
             endOfLine: 'lf',
             parser: 'babel',
             printWidth: 140,
-            tabWidth: 4,
+            tabWidth: 3,
             singleQuote: true,
         }
         this.scriptContent = format(this.scriptContent, prettierOptions)
+    }
+
+    clearOutput() {
+        this.scriptOutput = ''
+        JsEditorComponent._scriptOutput = ''
+    }
+
+    private static writeOutput(text: string) {
+        if (JsEditorComponent._scriptOutput == '') {
+            JsEditorComponent._scriptOutput = text
+            return
+        }
+
+        JsEditorComponent._scriptOutput = JsEditorComponent._scriptOutput + '\n' + text
     }
 
     private _readScript(filePath: string) {

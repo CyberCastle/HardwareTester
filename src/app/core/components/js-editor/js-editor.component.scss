@@ -11,3 +11,12 @@
 .button-style[disabled] {
     cursor: not-allowed !important;
 }
+
+.script-output-section {
+    min-width: 100%;
+    min-height: 25em;
+}
+
+.flexible-space {
+    flex: 0 0 64px;
+}

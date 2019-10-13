@@ -4,8 +4,9 @@ import { transform, types, NodePath } from '@babel/core'
 
 // 5 seconds for timeout
 var timeout = 5000
+// Based in this piece of code: https://github.com/hacksparrow/safe-eval/blob/master/index.js
 export class SafeEval {
-    constructor(private portService: SerialPortService) {}
+    constructor(private portService: SerialPortService, private sandboxContext: Context) {}
 
     public run(scriptContent: string) {
         const options: RunningScriptOptions = {
@@ -13,13 +14,8 @@ export class SafeEval {
             timeout: timeout,
         }
 
-        const sandboxContext: Context = {
-            portService: SerialPortService,
-            console: console,
-        }
-
         const resultKey = 'SAFE_EVAL_' + Math.floor(Math.random() * 1000000)
-        sandboxContext[resultKey] = {}
+        this.sandboxContext[resultKey] = {}
         const clearContext = `
 (function() {
     Function = undefined;
@@ -40,8 +36,8 @@ export class SafeEval {
         }).code
 
         // console.log(scriptContent)
-        runInNewContext(scriptContent, sandboxContext, options)
-        return sandboxContext[resultKey]
+        runInNewContext(scriptContent, this.sandboxContext, options)
+        return this.sandboxContext[resultKey]
     }
 
     public cancel() {}
