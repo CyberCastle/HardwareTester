@@ -85,7 +85,7 @@ export abstract class SerialPortBase {
         })
     }
 
-    public async close(): Promise<void> {
+    public async disconnect(): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this._port.close(error => {
                 if (error != undefined) {
