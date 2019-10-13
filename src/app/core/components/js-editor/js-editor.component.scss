@@ -3,3 +3,11 @@
 @import '~codemirror/addon/fold/foldgutter';
 @import '~codemirror/addon/hint/show-hint';
 @import '~codemirror/addon/lint/lint';
+
+.button-style {
+    font-size: 20px;
+}
+
+.button-style[disabled] {
+    cursor: not-allowed !important;
+}

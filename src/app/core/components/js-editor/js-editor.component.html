@@ -1,26 +1,38 @@
 <mat-card>
-    <mat-card-subtitle>Simple card</mat-card-subtitle>
-    <mat-card-actions>
-        <md-toolbar color="primary">
-            <mat-toolbar-row>
-                <button mat-icon-button (click)="openScript()">
-                    <fa-icon icon="folder-open"></fa-icon>
-                </button>
-                <button mat-icon-button (click)="saveScript()">
-                    <fa-icon icon="save"></fa-icon>
-                </button>
-                <button mat-icon-button (click)="runScript()">
-                    <fa-icon icon="play"></fa-icon>
-                </button>
-                <button mat-icon-button (click)="stopScript()">
-                    <fa-icon icon="stop"></fa-icon>
-                </button>
-                <button mat-icon-button (click)="formatScript()">
-                    <fa-icon icon="paint-roller"></fa-icon>
-                </button>
-            </mat-toolbar-row>
-        </md-toolbar>
-    </mat-card-actions>
+    <md-toolbar color="primary">
+        <mat-toolbar-row>
+            <button class="button-style" mat-icon-button (click)="openScript()">
+                <fa-icon icon="folder-open"></fa-icon>
+            </button>
+            <button
+                class="button-style"
+                mat-icon-button
+                (click)="saveScript()"
+                [disabled]="this.scriptContent == null || this.scriptContent.length <= 4"
+            >
+                <fa-icon icon="save"></fa-icon>
+            </button>
+            <button
+                class="button-style"
+                mat-icon-button
+                (click)="runScript()"
+                [disabled]="this.scriptContent == null || this.scriptContent.length <= 4"
+            >
+                <fa-icon icon="play"></fa-icon>
+            </button>
+            <button class="button-style" mat-icon-button (click)="stopScript()" [disabled]="true">
+                <fa-icon icon="stop"></fa-icon>
+            </button>
+            <button
+                class="button-style"
+                mat-icon-button
+                (click)="formatScript()"
+                [disabled]="this.scriptContent == null || this.scriptContent.length <= 4"
+            >
+                <fa-icon icon="paint-roller"></fa-icon>
+            </button>
+        </mat-toolbar-row>
+    </md-toolbar>
     <mat-card-content>
         <ngx-codemirror
             [(ngModel)]="scriptContent"
