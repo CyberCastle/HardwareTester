@@ -69,7 +69,7 @@ export class I2CDriver extends SerialPortBase {
                 voltage: +status[3],
                 current: +status[4],
                 temperature: +status[5],
-                mode: +status[6],
+                mode: '' + status[6],
                 sda_state: +status[7],
                 scl_state: +status[8],
                 scl_speed: +status[9],
@@ -258,7 +258,7 @@ export declare namespace I2CDriver {
         readonly voltage: number
         readonly current: number
         readonly temperature: number
-        readonly mode: number
+        readonly mode: string
         readonly sda_state: number
         readonly scl_state: number
         readonly scl_speed: number
