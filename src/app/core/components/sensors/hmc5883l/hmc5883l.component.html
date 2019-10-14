@@ -1,0 +1,16 @@
+<div>
+    <button mat-raised-button (click)="startCompass()">Start Compass</button>
+    <button mat-raised-button (click)="stopCompass()">Stop Compass</button>
+    <div>
+        <h6>Min Axes</h6>
+        <p>
+            <label>X axis: </label><span>{{ axes.x }}</span>
+        </p>
+        <p>
+            <label>Y axis: </label><span>{{ axes.y }}</span>
+        </p>
+        <p>
+            <label>Z axis: </label><span>{{ axes.z }}</span>
+        </p>
+    </div>
+</div>

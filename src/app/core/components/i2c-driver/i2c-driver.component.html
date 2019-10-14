@@ -1,0 +1,24 @@
+<md-toolbar color="primary" fxLayout="row">
+    <button mat-raised-button (click)="connectDevice()" [disabled]="this._isConnected">Connect</button>
+    <button mat-raised-button (click)="scanI2cAddress()" [disabled]="!this._isConnected">Scan</button>
+    <button mat-raised-button (click)="disconnectDevice()" [disabled]="!this._isConnected">Disconnect</button>
+</md-toolbar>
+
+<table>
+    <ng-container *ngFor="let row of i2cAddressMask">
+        <tr>
+            <ng-container *ngFor="let col of row">
+                <td [ngClass]="{ 'i2c-address-remark': i2cAddress.includes(col) }">
+                    {{
+                        col
+                            .toString(16)
+                            .padStart(2, '0')
+                            .toUpperCase()
+                    }}
+                </td>
+            </ng-container>
+        </tr>
+    </ng-container>
+</table>
+
+<div *ngFor="let item of i2cStatus | keyvalue">{{ item.key }}:{{ item.value }}</div>
