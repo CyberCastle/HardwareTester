@@ -114,9 +114,8 @@ export class HMC5883L {
 
     /**
      * Constructor
-     * @param {I2CDriver} i2c the i2c library (such that we don't have to load it twice).
-     * @param {number}    i2cBusNum The i2c bus number.
-     * @param {object}    options   The additional options.
+     * @param {I2CDriver} i2c The i2c library (such that we don't have to load it twice).
+     * @param {HMC5883L.Options} options The additional options.
      *
      * Options:
      *   scale (string): The scale range to use.  See pp13 of the technical documentation.  Default is '0.88'.
