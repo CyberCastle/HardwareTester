@@ -27,9 +27,7 @@ export class Timeout {
     set(delay: number, rejectReason: any = ''): Promise<any> {
         return new Promise((resolve, reject) => {
             this.clear()
-            const fn = rejectReason
-                ? () => reject(this.toError(rejectReason))
-                : resolve
+            const fn = rejectReason ? () => reject(this.toError(rejectReason)) : resolve
             this._id = setTimeout(fn, delay)
             this._delay = delay
         })
@@ -47,7 +45,7 @@ export class Timeout {
         }
     }
 
-    private promiseFinally(promise: any, fn: () => void): Promise<any> {
+    private async promiseFinally(promise: any, fn: () => void): Promise<any> {
         const success = (result: any) => {
             fn()
             return result
