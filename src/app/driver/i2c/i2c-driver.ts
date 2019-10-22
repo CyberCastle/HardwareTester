@@ -30,9 +30,8 @@ export class I2CDriver extends SerialPortBase {
         for (let i = 0; i < ecoChars.length; i++) {
             let ecoChar = await this.echo(ecoChars[i])
             if (ecoChar.length > 1 || ecoChar[0] != ecoChars[i]) {
-                return new Promise<I2CDriver.Status>((resolve, reject) => {
-                    reject(new Error(`Echo test failed. Expected ${ecoChars[i]} but received ${ecoChar}`))
-                })
+                await this.reset()
+                Promise.reject(new Error(`Echo test failed. Expected ${ecoChars[i]} but received ${ecoChar}`))
             }
         }
 
@@ -43,9 +42,7 @@ export class I2CDriver extends SerialPortBase {
             return this.getStatus()
         }
 
-        return new Promise<I2CDriver.Status>((resolve, reject) => {
-            resolve(status)
-        })
+        return Promise.resolve(status)
     }
 
     public async echo(char: number): Promise<Uint8Array> {
@@ -126,9 +123,7 @@ export class I2CDriver extends SerialPortBase {
             }
         })
 
-        return new Promise((resolve, reject) => {
-            resolve(hexAddressList)
-        })
+        return Promise.resolve(hexAddressList)
     }
 
     public i2cSpeed(speed: number): Promise<void> {
@@ -183,14 +178,12 @@ export class I2CDriver extends SerialPortBase {
             let len = dataArraySize - i < 64 ? dataArraySize - i : 64
             let data = new Uint8Array(len + 1)
             data[0] = 0xc0 + len - 1
-            data.set(dataArray.slice(i, len), i + 1)
+            data.set(new Uint8Array(dataArray.buffer, i, len), 1)
             await this._write(data)
             ack = await this.i2cAck()
         }
 
-        return new Promise<boolean>((resolve, reject) => {
-            resolve(ack)
-        })
+        return Promise.resolve(ack)
     }
 
     public async i2cRead(numBytes: number): Promise<Uint8Array> {
@@ -200,12 +193,12 @@ export class I2CDriver extends SerialPortBase {
             let len = numBytes - i < 64 ? numBytes - i : 64
             await this._write(new Uint8Array([0x80 + len - 1]))
             let response = await this._read(30)
-            dataArray.set(response.slice(0, len), i)
+            if (response.length > 0) {
+                dataArray.set(new Uint8Array(response.buffer, 0, len), i)
+            }
         }
 
-        return new Promise<Uint8Array>((resolve, reject) => {
-            resolve(dataArray)
-        })
+        return Promise.resolve(dataArray)
     }
 
     public async i2cRegWrite(i2cPort: number, i2cRegister: number, data?: number | Uint8Array): Promise<boolean> {
@@ -242,7 +235,7 @@ export class I2CDriver extends SerialPortBase {
 
         return new Promise<boolean>((resolve, reject) => {
             if (ack.length > 1) {
-                reject('Timeout')
+                reject('I2C ACK Timeout')
             }
             resolve((ack[0] & 1) != 0)
         })
