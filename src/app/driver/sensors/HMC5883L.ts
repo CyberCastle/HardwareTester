@@ -154,13 +154,13 @@ export class HMC5883L {
      * Initalize the compass.
      */
     public async init(): Promise<void> {
-        // Initializing the HMC5883L module.
         try {
             await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_CONFIGURATION_REGISTER_A_ADDRESS, this.defaultRegister_A_value)
             await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_CONFIGURATION_REGISTER_B_ADDRESS, this.scale.reg << 5)
             await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_MODE_REGISTER_ADDRESS, this.HMC5883L_OPERATING_MODE_CONTINUOUS)
         } catch (ex) {
             console.error('HMC5883L.init(): there was an error initializing: ', ex)
+            return Promise.reject(ex)
         }
     }
 
