@@ -1,10 +1,12 @@
 import { I2CDriver } from './../i2c/i2c-driver'
-import { Font } from '../../glyph/Font'
+import { GFXFont, GFXglyph } from '../../glyph/gfx-font'
+import { DefaultFont } from '../../glyph/fonts/default-font'
 
 /**
- *  This code is based primarily on the work of fauxpark (https://github.com/fauxpark/oled-core),
- *  with addition of codes obtained from https://github.com/entrusc/Pi-OLED and
- *  https://github.com/noopkat/oled-js
+ * This code is based primarily on the work of fauxpark (https://github.com/fauxpark/oled-core),
+ * with addition of codes obtained from https://github.com/entrusc/Pi-OLED,
+ * https://github.com/noopkat/oled-js and https://github.com/adafruit/Adafruit-GFX-Library/blob/master/Adafruit_GFX.cpp
+ * (for custom font support)
  *
  *  Datashhet can be obtained from here http://www.adafruit.com/datasheets/SSD1306.pdf
  *
@@ -201,8 +203,7 @@ export class SSD1306 {
             await this.sendCommand(SSD1306.Command.DISPLAY_ALL_ON_RESUME)
             await this.setInverted(false)
             await this.setDisplayOn(true)
-            this.clearDisplay()
-            await this.display()
+            await this.clearDisplay()
         } catch (ex) {
             console.error('SSD1306.startup(): there was an error on startup the device: ', ex)
             return Promise.reject(ex)
@@ -214,8 +215,7 @@ export class SSD1306 {
      */
     public async shutdown(): Promise<void> {
         try {
-            this.clearDisplay()
-            await this.display()
+            await this.clearDisplay()
             await this.setDisplayOn(false)
             await this.setInverted(false)
             await this.setHFlipped(false)
@@ -250,9 +250,6 @@ export class SSD1306 {
     public async display(): Promise<void> {
         await this.sendCommand(SSD1306.Command.SET_COLUMN_ADDRESS, [0, this.width - 1])
         await this.sendCommand(SSD1306.Command.SET_PAGE_ADDRESS, [0, this.pages - 1])
-
-        console.log(this.frameBuffer)
-
         await this.sendData(this.frameBuffer)
         if (this.isScrolling()) {
             await this.noOp()
@@ -676,30 +673,73 @@ export class SSD1306 {
      *
      * @param {number} x The X position to start drawing at.
      * @param {number} y The Y position to start drawing at.
-     * @param {*} font The font to use.
      * @param {string} text The text to draw.
+     * @param {GFXFont} font The font to use. If this parameter is not set, a default font will be used.
      */
-    public text(x: number, y: number, font: Font, text: string) {
-        let rows: number = font.getRows()
-        let cols: number = font.getColumns()
-        let glyphs: number[] = font.getGlyphs()
-        let bytes: number[] = /* getBytes */ text.split('').map(s => s.charCodeAt(0))
-        for (let i: number = 0; i < text.length; i++) {
-            {
-                let p: number = (bytes[i] & 255) * cols
-                for (let col: number = 0; col < cols; col++) {
-                    {
-                        let mask: number = glyphs[p++]
-                        for (let row: number = 0; row < rows; row++) {
-                            {
-                                this.setPixel(x, y + row, (mask & 1) === 1)
-                                mask >>= 1
+    public text(x: number, y: number, text: string, gfxFont?: GFXFont) {
+        const chars: number[] = text.split('').map(s => s.charCodeAt(0))
+
+        if (!gfxFont) {
+            // Text is rendered with default font
+            for (let i: number = 0; i < text.length; i++) {
+                {
+                    let p: number = (chars[i] & 255) * DefaultFont.COLUMNS
+                    for (let col: number = 0; col < DefaultFont.COLUMNS; col++) {
+                        {
+                            let mask: number = DefaultFont.GLYPHS[p++]
+                            for (let row: number = 0; row < DefaultFont.ROWS; row++) {
+                                {
+                                    this.setPixel(x, y + row, (mask & 1) === 1)
+                                    mask >>= 1
+                                }
+                            }
+                            x++
+                        }
+                    }
+                    x++
+                }
+            }
+        } else {
+            // Text is rendered with custom font
+            for (let i: number = 0; i < text.length; i++) {
+                let c = chars[i]
+                const first: number = gfxFont.first
+                const bitmap: Uint8Array = gfxFont.bitmap
+
+                if (c >= first && c <= gfxFont.last) {
+                    c -= gfxFont.first
+                    const glyph: GFXglyph = gfxFont.glyph[c]
+                    let bo: number = glyph.bitmapOffset
+                    const w: number = glyph.width
+                    const h: number = glyph.height
+                    const xo: number = glyph.xAdvance
+                    const yo: number = glyph.yOffset
+
+                    if (w > 0 && h > 0) {
+                        // Is there an associated bitmap?
+                        if (x + xo + w > this.width) {
+                            x = 0
+                            y += gfxFont.yAdvance
+                        }
+                        let xx = 0,
+                            yy = 0,
+                            bits = 0,
+                            bit = 0
+
+                        for (yy = 0; yy < h; yy++) {
+                            for (xx = 0; xx < w; xx++) {
+                                if (!(bit++ & 7)) {
+                                    bits = bitmap[bo++]
+                                }
+                                if (bits & 0x80) {
+                                    this.setPixel(x + xo + xx, y + yo + yy, true)
+                                }
+                                bits <<= 1
                             }
                         }
-                        x++
                     }
+                    x += glyph.xAdvance
                 }
-                x++
             }
         }
     }
@@ -716,7 +756,7 @@ export class SSD1306 {
     public image(image: number[], x: number, y: number, width: number, height: number) {}
 
     /**
-     * Draw a line from one point to another.
+     * Draw a line from one point to another (Bresenham's algorithm).
      *
      * @param {number} x0 The X position of the first point.
      * @param {number} y0 The Y position of the first point.
