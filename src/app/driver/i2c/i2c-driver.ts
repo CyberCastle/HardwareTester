@@ -190,18 +190,18 @@ export class I2CDriver extends SerialPortBase {
     }
 
     public async i2cRead(numBytes: number): Promise<Uint8Array> {
-        const dataArray = new Uint8Array(numBytes)
+        const buffer = new Uint8Array(numBytes)
 
         for (let i = 0; i < numBytes; i += 64) {
             let len = numBytes - i < 64 ? numBytes - i : 64
             await this._write(new Uint8Array([0x80 + len - 1]))
-            let response = await this._read(len)
-            if (response.length > 0) {
-                dataArray.set(new Uint8Array(response.buffer, 0, len), i)
+            let data = await this._read(len)
+            if (data.length > 0) {
+                buffer.set(new Uint8Array(data, 0, len), i)
             }
         }
 
-        return Promise.resolve(dataArray)
+        return Promise.resolve(buffer)
     }
 
     public async i2cRegWrite(i2cPort: number, i2cRegister: number, data?: number | Uint8Array): Promise<boolean> {
@@ -224,13 +224,30 @@ export class I2CDriver extends SerialPortBase {
 
         // Stop device
         await this.i2cStop()
-        return ack
+        return Promise.resolve(ack)
     }
 
     public async i2cRegRead(i2cPort: number, i2cRegister: number, numBytes: number): Promise<Uint8Array> {
-        // The read i2c register command is 'r' (ASCII code: 0x72)
-        await this._write(new Uint8Array([0x72, i2cPort, i2cRegister, numBytes]))
-        return this.i2cRead(numBytes)
+        // Start device, for select register
+        let ack = await this.i2cStart(i2cPort, true)
+
+        // Select register
+        if (ack) {
+            ack = await this.i2cWrite(new Uint8Array([i2cRegister]))
+        }
+
+        // Start device again, for read register
+        ack = await this.i2cStart(i2cPort, false)
+        if (!ack) {
+            return Promise.reject('I2CDriver.i2cRegRead() error: Failed to read register ' + i2cRegister + '.')
+        }
+
+        // Read register
+        const buffer: Uint8Array = await this.i2cRead(numBytes)
+
+        // Stop device
+        await this.i2cStop()
+        return Promise.resolve(buffer)
     }
 
     // Reads a byte and looks at the right most 1.
