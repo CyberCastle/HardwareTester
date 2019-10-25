@@ -12,7 +12,7 @@ import { HMC5883L } from '../../../../driver/sensors/HMC5883L'
 export class HMC5883LComponent implements OnInit, OnDestroy {
     private i2c: I2CDriver
     private compass: HMC5883L
-    public axes: HMC5883L.Axis = {
+    public axes: HMC5883L.MagneticData = {
         x: 0,
         y: 0,
         z: 0,
@@ -54,8 +54,8 @@ export class HMC5883LComponent implements OnInit, OnDestroy {
 
     async stopCompass() {
         this.compass.stopContinuousReader()
+        await this.i2c.reset()
         await this.i2c.disconnect()
-        this.i2c = null
         //console.log(this.compass.abortCalibration())
     }
 }
