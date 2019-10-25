@@ -7,6 +7,8 @@ import { Timeout } from '../../utils/await-timeout'
  * https://github.com/rm-hull/hmc5883l/blob/master/hmc5883l.py
  * and
  * https://github.com/psiphi75/compass-hmc5883l/blob/master/Compass.js
+ * and
+ * https://github.com/DFRobot/DFRobot_QMC5883/blob/master/DFRobot_QMC5883.cpp
  *
  * Calibration code is based from:
  * https://github.com/helscream/HMC5883L_Header_Arduino_Auto_calibration/blob/master/Core/Compass_header_example_ver_0_2/compass.cpp
@@ -16,27 +18,18 @@ import { Timeout } from '../../utils/await-timeout'
 
 export class HMC5883L {
     public readonly HMC5883L_ADDRESS = 0x1e
-    public readonly HMC5883L_READ_BLOCK = 0x00
 
-    // Configuration Register A: See pp12 of the technical documentation.
-    public readonly HMC5883L_CONFIGURATION_REGISTER_A_ADDRESS = 0x00
-    public readonly DEFAULT_SAMPLES_AVERAGED = 0x03 // MA1 to MA0 - 8 samples on average
-    public readonly HMC5883L_MEASUREMENT_MODE_NORMAL = 0x00
-    public readonly HMC5883L_MEASUREMENT_MODE_POSITIVE_BIAS = 0x01
-    public readonly HMC5883L_MEASUREMENT_MODE_NEGATIVE_BIAS = 0x02
-    public readonly DEFAULT_SAMPLE_RATE = 15
+    private readonly HMC5883L_CONFIGURATION_REGISTER_A_ADDRESS = 0x00
+    private readonly HMC5883L_CONFIGURATION_REGISTER_B_ADDRESS = 0x01
+    private readonly HMC5883L_MODE_REGISTER_ADDRESS = 0x02
+    private readonly HMC5883L_DATAOUTPUT_REGISTER_ADDRESS_BLOCK = 0x03
 
-    // Configuration Register B: See pp13 of the technical documentation.
-    public readonly HMC5883L_CONFIGURATION_REGISTER_B_ADDRESS = 0x01
-    public readonly DEFAULT_SCALE = 0.88
+    // Parameters for calibration
+    private readonly HMC5883L_MEASUREMENT_MODE_POSITIVE_BIAS = 0x01
+    private readonly HMC5883L_MEASUREMENT_MODE_NEGATIVE_BIAS = 0x02
 
-    // Configuration Mode Register: See pp14 of the technical documentation.
-    public readonly HMC5883L_MODE_REGISTER_ADDRESS = 0x02
-    public readonly HMC5883L_OPERATING_MODE_CONTINUOUS = 0x00
-    public readonly HMC5883L_OPERATING_MODE_SINGLE_SHOT = 0x01
-    public readonly HMC5883L_OPERATING_MODE_IDLE = 0x02
-
-    public readonly DEFAULT_CALIBRATION: HMC5883L.CalibrationData = {
+    // Calibration result object
+    private internalCalibrationResult: HMC5883L.CalibrationData = {
         offset: {
             x: 0,
             y: 0,
@@ -49,33 +42,8 @@ export class HMC5883L {
         },
     }
 
-    public readonly DEFAULT_OPTIONS: HMC5883L.Options = {
-        scale: this.DEFAULT_SCALE,
-        sampleRate: this.DEFAULT_SAMPLE_RATE,
-        declination: 0,
-        calibration: this.DEFAULT_CALIBRATION,
-    }
-
-    private readonly sampleRateMap = {
-        0.75: 0,
-        1.5: 1,
-        3: 2,
-        7.5: 3,
-        15: 4 /* Default value */,
-        30: 5,
-        75: 6,
-    }
-
-    private readonly scaleMap = {
-        0.88: { reg: 0, scalar: 0.73 }, // 0.88 Gauss =  88 uTesla --> Default value
-        1.3: { reg: 1, scalar: 0.92 }, // 1.3 Gauss = 130 uTesla
-        1.9: { reg: 2, scalar: 1.22 }, // 1.9 Gauss = 190 uTesla
-        2.5: { reg: 3, scalar: 1.52 }, // 2.5 Gauss = 250 uTesla
-        4.0: { reg: 4, scalar: 2.27 }, // 4.0 Gauss = 400 uTesla
-        4.7: { reg: 5, scalar: 2.56 }, // 4.7 Gauss = 470 uTesla
-        5.6: { reg: 6, scalar: 3.03 }, // 5.6 Gauss = 560 uTesla
-        8.1: { reg: 7, scalar: 4.35 }, // 8.1 Gauss = 810 uTesla
-    }
+    // Map with gain digital resolution values
+    private readonly gainResolutionMap: Map<HMC5883L.GainRange, number> = new Map()
 
     /**
      * The HMC5883L has a self-test mode which applies either a negative or positive bias field along
@@ -94,22 +62,16 @@ export class HMC5883L {
     private readonly compass_Z_excitation = 1080 // The magnetic field excitation in Z direction during Self Test (Calibration)
 
     private declination: number
-    private scale: any
     private defaultRegister_A_value: number
-    public isContinuousReader: boolean
+    private isContinuousReader: boolean
 
-    // Calibration result object
-    private calibrationResult: HMC5883L.CalibrationData = {
-        offset: {
-            x: 0,
-            y: 0,
-            z: 0,
-        },
-        gainError: {
-            x: 1,
-            y: 1,
-            z: 1,
-        },
+    public readonly DEFAULT_OPTIONS: HMC5883L.Options = {
+        samples: HMC5883L.SamplesAverage.SAMPLES_8,
+        dataRate: HMC5883L.DataOutputRate.RATE_15HZ,
+        gainRange: HMC5883L.GainRange.GAIN_1_3,
+        mode: HMC5883L.OperationMode.CONTINOUS,
+        declination: 0,
+        calibration: this.internalCalibrationResult,
     }
 
     /**
@@ -117,25 +79,27 @@ export class HMC5883L {
      * @param {I2CDriver} i2c The i2c library (such that we don't have to load it twice).
      * @param {HMC5883L.Options} options The additional options.
      *
-     * Options:
-     *   scale (string): The scale range to use.  See pp13 of the technical documentation.  Default is '0.88'.
-     *   sampleRate (string): The sample rate (Hz), must be one of .  Default is '15' Hz (samples per second).
-     *   declination (number): The declination, in degrees.  If this is provided the result will be true north, as opposed to magnetic north.
-     *   calibration {CalibrationData}: alibration data to get more accurate results out of the magnetometer
      */
     public constructor(private i2c: I2CDriver, private options?: HMC5883L.Options) {
         if (!options) {
             this.options = this.DEFAULT_OPTIONS
         }
 
-        // Continuos Reader stopped
+        // Continuos Reader stopped by default
         this.isContinuousReader = false
 
-        // Set up the scale setting
-        this.scale = this.scaleMap[this.options.scale]
+        // Set gain digital resolution values
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_0_8, 0.73)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_1_3, 0.92)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_1_9, 1.22)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_2_5, 1.52)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_4_0, 2.27)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_4_7, 2.56)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_5_6, 3.03)
+        this.gainResolutionMap.set(HMC5883L.GainRange.GAIN_8_1, 4.35)
 
         // Set up the config_A_value
-        this.defaultRegister_A_value = (this.DEFAULT_SAMPLES_AVERAGED << 5) | (this.sampleRateMap[this.options.sampleRate] << 2)
+        this.defaultRegister_A_value = this.options.samples | this.options.dataRate
 
         // Set up declination
         this.declination = (this.options.declination / 180) * Math.PI
@@ -156,72 +120,15 @@ export class HMC5883L {
     public async init(): Promise<void> {
         try {
             await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_CONFIGURATION_REGISTER_A_ADDRESS, this.defaultRegister_A_value)
-            await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_CONFIGURATION_REGISTER_B_ADDRESS, this.scale.reg << 5)
-            await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_MODE_REGISTER_ADDRESS, this.HMC5883L_OPERATING_MODE_CONTINUOUS)
+            await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_CONFIGURATION_REGISTER_B_ADDRESS, this.options.gainRange)
+            await this.i2c.i2cRegWrite(this.HMC5883L_ADDRESS, this.HMC5883L_MODE_REGISTER_ADDRESS, this.options.mode)
         } catch (ex) {
             console.error('HMC5883L.init(): there was an error initializing: ', ex)
             return Promise.reject(ex)
         }
     }
 
-    /**
-     * Get raw values from the compass.
-     */
-    private async getRawValues(): Promise<HMC5883L.Axis> {
-        // The 12 bytes of the register are read
-        let buf = await this.i2c.i2cRegRead(this.HMC5883L_ADDRESS, this.HMC5883L_READ_BLOCK, 12)
-        let readError = false
-
-        function twos_complement(val: number, bits: number) {
-            if ((val & (1 << (bits - 1))) !== 0) {
-                val = val - (1 << bits)
-            }
-            return val
-        }
-
-        function convert(offset: number) {
-            var val = twos_complement((buf[offset] << 8) | buf[offset + 1], 16)
-            if (val === -4096) {
-                readError = true
-                console.error('Error to obtain the information of the xyz axes')
-                return null
-            }
-            return val
-        }
-
-        const axes: HMC5883L.Axis = {
-            x: convert(3) * this.scale.scalar,
-            y: convert(7) * this.scale.scalar,
-            z: convert(5) * this.scale.scalar,
-        }
-
-        await Timeout.sleep(50) // Wait 70ns (50 + 20ns configurated in SerialPortBase class), before read the next values
-        return new Promise((resolve, reject) => {
-            if (readError) {
-                reject('Error to obtain the information of the xyz axes')
-            }
-
-            resolve(axes)
-        })
-    }
-
-    /**
-     * Get the scaled and calibrated values from the compass.
-     */
-    private async getCalibratedValues(): Promise<HMC5883L.Axis> {
-        const rawAxes = await this.getRawValues()
-        const calibratedAxes: HMC5883L.Axis = {
-            x: rawAxes.x * this.options.calibration.gainError.x + this.options.calibration.offset.x,
-            y: rawAxes.y * this.options.calibration.gainError.y + this.options.calibration.offset.y,
-            z: rawAxes.z * this.options.calibration.gainError.z + this.options.calibration.offset.z,
-        }
-
-        return new Promise((resolve, reject) => {
-            resolve(calibratedAxes)
-        })
-    }
-
-    public async startContinuousReader(cb: (axesData: HMC5883L.Axis) => void): Promise<void> {
+    public async startContinuousReader(cb: (axesData: HMC5883L.MagneticData) => void): Promise<void> {
         if (this.isContinuousReader) {
             return
         }
@@ -236,11 +143,18 @@ export class HMC5883L {
         this.isContinuousReader = false
     }
 
+    public abortCalibration(): HMC5883L.CalibrationData {
+        this.isContinuousReader = false
+        return this.internalCalibrationResult
+    }
+
     /**
      * This Function calculates the offset in the Magnetometer
      * using Positive and Negative bias Self test capability
      */
-    public async startCalibration(cb: (minAxesData: HMC5883L.Axis, maxAxesData: HMC5883L.Axis) => void): Promise<HMC5883L.CalibrationData> {
+    public async startCalibration(
+        cb: (minAxesData: HMC5883L.MagneticData, maxAxesData: HMC5883L.MagneticData) => void
+    ): Promise<HMC5883L.CalibrationData> {
         if (this.isContinuousReader) {
             return
         }
@@ -276,7 +190,7 @@ export class HMC5883L {
         }
 
         // Saving the result of the calibration
-        this.calibrationResult.gainError = {
+        this.internalCalibrationResult.gainError = {
             x: (this.compass_XY_excitation / Math.abs(negativeBiasAxes.x) + compass_x_gainError) / 2,
             y: (this.compass_XY_excitation / Math.abs(negativeBiasAxes.y) + compass_y_gainError) / 2,
             z: (this.compass_Z_excitation / Math.abs(negativeBiasAxes.z) + compass_z_gainError) / 2,
@@ -298,12 +212,12 @@ export class HMC5883L {
          */
 
         let compass_x_scalled: number, compass_y_scalled: number, compass_z_scalled: number
-        let minAxes: HMC5883L.Axis = {
+        let minAxes: HMC5883L.MagneticData = {
             x: Infinity,
             y: Infinity,
             z: Infinity,
         }
-        let maxAxes: HMC5883L.Axis = {
+        let maxAxes: HMC5883L.MagneticData = {
             x: -Infinity,
             y: -Infinity,
             z: -Infinity,
@@ -329,33 +243,115 @@ export class HMC5883L {
             cb(minAxes, maxAxes)
         }
 
-        this.calibrationResult.offset = {
+        this.internalCalibrationResult.offset = {
             x: (maxAxes.x - minAxes.x) / 2 - maxAxes.x,
             y: (maxAxes.y - minAxes.y) / 2 - maxAxes.y,
             z: (maxAxes.z - minAxes.z) / 2 - maxAxes.z,
         }
 
         return new Promise((resolve, reject) => {
-            resolve(this.calibrationResult)
+            resolve(this.internalCalibrationResult)
         })
     }
 
-    public abortCalibration(): HMC5883L.CalibrationData {
-        this.isContinuousReader = false
-        return this.calibrationResult
+    /**
+     * Get raw values from the compass.
+     */
+    private async getRawValues(): Promise<HMC5883L.MagneticData> {
+        // The 6 bytes of the data output register are read
+        const buffer = await this.i2c.i2cRegRead(this.HMC5883L_ADDRESS, this.HMC5883L_DATAOUTPUT_REGISTER_ADDRESS_BLOCK, 6)
+        const axes: HMC5883L.MagneticData = {
+            x: this.getValueFromRegister(buffer, 0) * this.gainResolutionMap.get(this.options.gainRange),
+            y: this.getValueFromRegister(buffer, 2) * this.gainResolutionMap.get(this.options.gainRange),
+            z: this.getValueFromRegister(buffer, 4) * this.gainResolutionMap.get(this.options.gainRange),
+        }
+
+        await Timeout.sleep(70) // Wait 70ms, before read the next values
+        return Promise.resolve(axes)
+    }
+
+    private getValueFromRegister(registerData: Uint8Array, position: number) {
+        const value = this.twosCompliment16((registerData[position] << 8) | registerData[position + 1])
+        if (value === -4096) {
+            console.error('Overflow Error: Saturated readings in the information of the xyz axes.')
+            return NaN
+        }
+        return value
+    }
+
+    private twosCompliment16(i: number): number {
+        if (i > 0x8000) {
+            return i - 0x10000
+        }
+        return i
+    }
+
+    /**
+     * Get the calibrated values from the compass.
+     */
+    private async getCalibratedValues(): Promise<HMC5883L.MagneticData> {
+        const rawAxes = await this.getRawValues()
+        const calibratedAxes: HMC5883L.MagneticData = {
+            x: rawAxes.x * this.options.calibration.gainError.x + this.options.calibration.offset.x,
+            y: rawAxes.y * this.options.calibration.gainError.y + this.options.calibration.offset.y,
+            z: rawAxes.z * this.options.calibration.gainError.z + this.options.calibration.offset.z,
+        }
+
+        return new Promise((resolve, reject) => {
+            resolve(calibratedAxes)
+        })
     }
 }
-
 export declare namespace HMC5883L {
-    interface Axis {
+    interface MagneticData {
         x: number
         y: number
         z: number
     }
 
+    // Configuration Register A: See pp12 of the technical documentation.
+    const enum SamplesAverage {
+        SAMPLES_1 = 0b00000000, // 1 samples per measurement
+        SAMPLES_2 = 0b00100000, // 2 samples per measurement
+        SAMPLES_4 = 0b01000000, // 4 samples per measurement
+        SAMPLES_8 = 0b01100000, // 4 samples per measurement
+    }
+
+    // Configuration Register A: See pp12 of the technical documentation.
+    const enum DataOutputRate {
+        RATE_0_75_HZ = 0b00000000, // 0.75Hz
+        RATE_1_5HZ = 0b00000100, // 1.5Hz
+        RATE_3_0HZ = 0b00001000, // 3.0Hz
+        RATE_7_5HZ = 0b00001100, // 7.5Hz
+        RATE_15HZ = 0b00010000, // 15Hz
+        RATE_30HZ = 0b00010100, // 30Hz
+        RATE_75HZ = 0b00011000, // 75Hz
+    }
+
+    // Configuration Register B: See pp13 of the technical documentation.
+    const enum GainRange {
+        GAIN_0_8 = 0b00000000, // +/- 0.8 Ga
+        GAIN_1_3 = 0b00100000, // +/- 1.3 Ga
+        GAIN_1_9 = 0b01000000, // +/- 1.9 Ga
+        GAIN_2_5 = 0b01100000, // +/- 2.5 Ga
+        GAIN_4_0 = 0b10000000, // +/- 4.0 Ga
+        GAIN_4_7 = 0b10100000, // +/- 4.7 Ga
+        GAIN_5_6 = 0b11000000, // +/- 5.6 Ga
+        GAIN_8_1 = 0b11100000, // +/- 8.1 Ga
+    }
+
+    // Configuration Mode Register: See pp14 of the technical documentation.
+    const enum OperationMode {
+        CONTINOUS = 0b00000000,
+        SINGLE = 0b00000001,
+        IDLE = 0b00000010,
+    }
+
     interface Options {
-        scale: number
-        sampleRate: number
+        samples: SamplesAverage
+        dataRate: DataOutputRate
+        gainRange: GainRange
+        mode: OperationMode
         declination: number
         calibration: CalibrationData
     }
