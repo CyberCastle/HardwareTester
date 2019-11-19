@@ -7,5 +7,8 @@
         "types": [],
         "resolveJsonModule": true
     },
+    "angularCompilerOptions": {
+        "disableTypeScriptVersionCheck": true
+    },
     "exclude": ["**/*.spec.ts"]
 }
