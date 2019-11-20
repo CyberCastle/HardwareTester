@@ -11,6 +11,7 @@ import { DefaultFont } from '../../glyph/fonts/default-font'
  *  Datashhet can be obtained from here http://www.adafruit.com/datasheets/SSD1306.pdf
  *
  */
+
 export class SSD1306 {
     /**
      * Default values
@@ -345,7 +346,7 @@ export class SSD1306 {
             speed,
             end,
             SSD1306.Constant.DUMMY_BYTE_00,
-            SSD1306.Constant.DUMMY_BYTE_FF,
+            SSD1306.Constant.DUMMY_BYTE_FF
         ])
     }
 
@@ -1060,7 +1061,7 @@ export declare namespace SSD1306 {
         /**
          * No operation.
          */
-        NOOP = 0xe3,
+        NOOP = 0xe3
     }
 
     /**
@@ -1185,6 +1186,6 @@ export declare namespace SSD1306 {
         /**
          * Scroll by one pixel every 2 frames.
          */
-        SCROLL_STEP_2 = 0x07,
+        SCROLL_STEP_2 = 0x07
     }
 }
