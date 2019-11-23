@@ -31,13 +31,13 @@ function createWindow() {
             nodeIntegrationInWorker: true,
             backgroundThrottling: false,
             disableHtmlFullscreenWindowResize: true,
-            textAreasAreResizable: false,
-        },
+            textAreasAreResizable: false
+        }
     })
 
     if (serve) {
         require('electron-reload')(__dirname, {
-            electron: require(`${__dirname}/node_modules/electron`),
+            electron: require(`${__dirname}/node_modules/electron`)
         })
         mainWindow.loadURL('http://localhost:4200')
     } else {
@@ -45,7 +45,7 @@ function createWindow() {
             url.format({
                 pathname: path.join(__dirname, 'dist/index.html'),
                 protocol: 'file:',
-                slashes: true,
+                slashes: true
             })
         )
     }
@@ -87,21 +87,21 @@ try {
 
             const menuTemplate: Electron.MenuItemConstructorOptions[] = [
                 {
-                    label: app.getName(),
+                    label: app.name,
                     submenu: [
                         {
                             label: 'About',
                             click() {
                                 mainWindow.webContents.send('openAboutModal', '')
-                            },
+                            }
                         },
                         { type: 'separator' },
-                        { role: 'quit' },
-                    ],
+                        { role: 'quit' }
+                    ]
                 },
                 {
                     label: 'File',
-                    submenu: [{ label: 'Toggle Dev Tools', role: 'toggleDevTools' }],
+                    submenu: [{ label: 'Toggle Dev Tools', role: 'toggleDevTools' }]
                 },
                 {
                     label: 'Edit',
@@ -109,38 +109,38 @@ try {
                         {
                             label: 'Undo',
                             accelerator: 'CmdOrCtrl+Z',
-                            role: 'undo',
+                            role: 'undo'
                         },
                         {
                             label: 'Redo',
                             accelerator: 'Shift+CmdOrCtrl+Z',
-                            role: 'redo',
+                            role: 'redo'
                         },
                         {
-                            type: 'separator',
+                            type: 'separator'
                         },
                         {
                             label: 'Cut',
                             accelerator: 'CmdOrCtrl+X',
-                            role: 'cut',
+                            role: 'cut'
                         },
                         {
                             label: 'Copy',
                             accelerator: 'CmdOrCtrl+C',
-                            role: 'copy',
+                            role: 'copy'
                         },
                         {
                             label: 'Paste',
                             accelerator: 'CmdOrCtrl+V',
-                            role: 'paste',
+                            role: 'paste'
                         },
                         {
                             label: 'Select All',
                             accelerator: 'CmdOrCtrl+A',
-                            role: 'selectAll',
-                        },
-                    ],
-                },
+                            role: 'selectAll'
+                        }
+                    ]
+                }
             ]
 
             const menu = Menu.buildFromTemplate(menuTemplate)
