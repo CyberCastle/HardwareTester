@@ -35,6 +35,7 @@
         "reinstall": "rimraf node_modules package-lock.json main.js.map main.js && npm install"
     },
     "devDependencies": {
+        "@angular-builders/custom-webpack": "^8.4.0",
         "@angular-devkit/build-angular": "0.803.19",
         "@angular/cli": "8.3.19",
         "@angular/common": "8.2.14",
@@ -54,6 +55,7 @@
         "chai": "^4.2.0",
         "codelyzer": "5.2.0",
         "conventional-changelog-cli": "2.0.28",
+        "copy-webpack-plugin": "^5.0.5",
         "core-js": "3.4.1",
         "electron": "7.1.1",
         "electron-builder": "21.2.0",
@@ -99,6 +101,7 @@
         "@types/prettier": "^1.18.4",
         "@types/serialport": "7.0.4",
         "codemirror": "^5.49.2",
+        "fontconverter-wasm": "^1.1.0",
         "hammerjs": "^2.0.8",
         "jshint": "^2.10.3",
         "material-design-icons": "^3.0.1",
