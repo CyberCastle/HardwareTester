@@ -2,6 +2,11 @@ import { app, BrowserWindow, screen, Menu } from 'electron'
 import * as path from 'path'
 import * as url from 'url'
 
+// Remove those lines, after development finished
+delete process.env.ELECTRON_ENABLE_SECURITY_WARNINGS
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+//---
+
 let mainWindow: BrowserWindow
 const args = process.argv.slice(1)
 const serve: boolean = args.some(val => val === '--serve')
