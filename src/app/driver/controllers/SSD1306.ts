@@ -1,5 +1,5 @@
 import { I2CDriver } from './../i2c/i2c-driver'
-import { GFXFont, GFXglyph } from '../../glyph/gfx-font'
+import { GFXFont } from '../../glyph/gfx-font'
 import { DefaultFont } from '../../glyph/fonts/default-font'
 
 /**
@@ -704,17 +704,28 @@ export class SSD1306 {
             // Text is rendered with custom font
             for (let i: number = 0; i < text.length; i++) {
                 let c = chars[i]
-                const first: number = gfxFont.first
+                const first: number = gfxFont.firstChar
                 const bitmap: Uint8Array = gfxFont.bitmap
 
-                if (c >= first && c <= gfxFont.last) {
-                    c -= gfxFont.first
-                    const glyph: GFXglyph = gfxFont.glyph[c]
-                    let bo: number = glyph.bitmapOffset
-                    const w: number = glyph.width
-                    const h: number = glyph.height
-                    const xo: number = glyph.xAdvance
-                    const yo: number = glyph.yOffset
+                if (c >= first && c <= gfxFont.lastChar) {
+                    c -= gfxFont.firstChar
+
+                    /*
+                    glyph array struct:
+                        Element 0: (bitmapOffset) Pointer into GFXfont->bitmap
+                        Element 1: (width)        Bitmap dimensions in pixels
+                        Element 2: (height)       Bitmap dimensions in pixels
+                        Element 3: (xAdvance)     Distance to advance cursor (x axis)
+                        Element 4: (xOffset)      X dist from cursor pos to UL corner
+                        Element 5: (yOffset)      Y dist from cursor pos to UL corner
+                    */
+                    const glyph: Uint8Array = gfxFont.glyph[c]
+                    let bo: number = glyph[0]
+                    const w: number = glyph[1]
+                    const h: number = glyph[2]
+                    const xa: number = glyph[3]
+                    const xo: number = glyph[4]
+                    const yo: number = glyph[5]
 
                     if (w > 0 && h > 0) {
                         // Is there an associated bitmap?
@@ -739,7 +750,7 @@ export class SSD1306 {
                             }
                         }
                     }
-                    x += glyph.xAdvance
+                    x += xa
                 }
             }
         }
