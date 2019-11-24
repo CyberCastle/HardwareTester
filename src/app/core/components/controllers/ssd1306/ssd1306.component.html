@@ -1,0 +1,15 @@
+<p><button mat-raised-button (click)="selectFont()">Select Font</button></p>
+<p>
+    <mat-form-field appearance="standard">
+        <mat-label>Font Size</mat-label>
+        <input matInput type="number" placeholder="" [(ngModel)]="fontSize" />
+    </mat-form-field>
+</p>
+
+<p>
+    <button mat-raised-button (click)="action()" [disabled]="this.fontFilePath == null || this.fontSize == null || this.fontSize <= 4">
+        Action!!!
+    </button>
+</p>
+<p><button mat-raised-button (click)="reset()">Reset</button></p>
+<p>{{ fontFilePath }}</p>

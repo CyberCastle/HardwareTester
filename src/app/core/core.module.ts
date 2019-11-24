@@ -11,11 +11,12 @@ import { CodemirrorModule } from '@ctrl/ngx-codemirror'
 import { JsEditorComponent } from './components/js-editor/js-editor.component'
 import { I2cDriverComponent } from './components/i2c-driver/i2c-driver.component'
 import { HMC5883LComponent } from './components/sensors/hmc5883l/hmc5883l.component'
+import { SSD1306Component } from './components/controllers/ssd1306/ssd1306.component'
 
 @NgModule({
-    declarations: [JsEditorComponent, I2cDriverComponent, HMC5883LComponent],
+    declarations: [JsEditorComponent, I2cDriverComponent, HMC5883LComponent, SSD1306Component],
     imports: [CommonModule, AngularMaterialModule, FlexLayoutModule, FormsModule, FontAwesomeModule, CodemirrorModule],
-    exports: [AngularMaterialModule, JsEditorComponent, I2cDriverComponent, HMC5883LComponent],
+    exports: [AngularMaterialModule, JsEditorComponent, I2cDriverComponent, HMC5883LComponent, SSD1306Component],
     schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
 export class CoreModule {
