@@ -4,6 +4,7 @@ import { ElectronService } from '../../services'
 import { SafeEval } from './safe-eval'
 import { readFile, writeFile } from 'fs'
 import { Options, format } from 'prettier'
+import { Context } from 'vm'
 
 // Hardware support
 import { SerialPortService } from '../../../driver/serialport/serial-port.service'
@@ -20,13 +21,12 @@ import 'codemirror/addon/hint/javascript-hint'
 import 'codemirror/addon/lint/lint'
 import 'codemirror/addon/lint/javascript-lint'
 import 'codemirror/mode/javascript/javascript'
-import { Context } from 'vm'
 
 @Component({
     selector: 'app-js-editor',
     templateUrl: './js-editor.component.html',
     styleUrls: ['./js-editor.component.scss'],
-    encapsulation: ViewEncapsulation.None,
+    encapsulation: ViewEncapsulation.None
 })
 export class JsEditorComponent implements OnInit {
     private electronBrowserWindow: typeof BrowserWindow
@@ -46,8 +46,8 @@ export class JsEditorComponent implements OnInit {
             ngZone: ngZone,
             portService: portService,
             console: {
-                log: JsEditorComponent.writeOutput,
-            },
+                log: JsEditorComponent.writeOutput
+            }
         }
 
         this.safeEval = new SafeEval(sandboxContext)
@@ -61,7 +61,7 @@ export class JsEditorComponent implements OnInit {
     openScript(): void {
         const openDialogOptions: OpenDialogOptions = {
             properties: ['openFile', 'treatPackageAsDirectory'],
-            filters: [{ name: 'JS Scripts', extensions: ['js'] }],
+            filters: [{ name: 'JS Scripts', extensions: ['js'] }]
         }
 
         this.electronDialog
@@ -84,7 +84,7 @@ export class JsEditorComponent implements OnInit {
         }
 
         const saveDialogOptions: SaveDialogOptions = {
-            filters: [{ name: 'JS Scripts', extensions: ['js'] }],
+            filters: [{ name: 'JS Scripts', extensions: ['js'] }]
         }
 
         await this.electronDialog
@@ -135,7 +135,7 @@ export class JsEditorComponent implements OnInit {
             parser: 'babel',
             printWidth: 140,
             tabWidth: 3,
-            singleQuote: true,
+            singleQuote: true
         }
         this.scriptContent = format(this.scriptContent, prettierOptions)
     }
