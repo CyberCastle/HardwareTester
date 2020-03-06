@@ -1,7 +1,7 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-    "module": "esnext",
+        "module": "esnext",
         "outDir": "./dist/out-tsc",
         "sourceMap": true,
         "declaration": false,
@@ -13,6 +13,7 @@
         "lib": ["es2018", "dom"],
         "resolveJsonModule": true
     },
-    "include": ["main.ts", "src/**/*"],
+    "include": ["src/**/*"],
+    "files": ["main.ts"],
     "exclude": ["node_modules"]
 }
