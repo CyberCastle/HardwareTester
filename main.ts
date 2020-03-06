@@ -13,6 +13,8 @@ const serve: boolean = args.some(val => val === '--serve')
 const dev: boolean = args.some(val => val === '--dev')
 
 function createWindow() {
+    app.allowRendererProcessReuse = false
+
     const electronScreen = screen
     const size = electronScreen.getPrimaryDisplay().workAreaSize
 
