@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Input } from '@angular/core'
-import { MatDialog } from '@angular/material'
+import { MatDialog } from '@angular/material/dialog';
 import { SerialPortService } from '../../../../driver/serialport/serial-port.service'
 import { I2CDriver } from '../../../../driver/i2c/i2c-driver'
 import { HMC5883L } from '../../../../driver/sensors/HMC5883L'

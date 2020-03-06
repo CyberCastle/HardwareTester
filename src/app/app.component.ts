@@ -1,5 +1,5 @@
 import { Component, OnInit, NgZone } from '@angular/core'
-import { MatDialog } from '@angular/material'
+import { MatDialog } from '@angular/material/dialog';
 import { ElectronService } from './core/services'
 import { TranslateService } from '@ngx-translate/core'
 import { AboutComponent } from './modal/about/about.component'
